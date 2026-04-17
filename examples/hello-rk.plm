@@ -1,0 +1,15 @@
+/*  Radio-86RK "hello" — prints a string via the monitor ROM routine
+    at F818h (puts: HL points to a 0-terminated string).             */
+
+PUTS: PROCEDURE (P) REGS(HL) AT (0F818H);
+    DECLARE P ADDRESS;
+END PUTS;
+
+PUTC: PROCEDURE (CH) REGS(C) AT (0F809H);
+    DECLARE CH BYTE;
+END PUTC;
+
+DECLARE MSG BYTE(14) INITIAL(48H, 65H, 6CH, 6CH, 6FH, 20H, 52H, 4BH, 21H, 0DH, 0AH, 0);
+
+CALL PUTS(.MSG);      /* address-of not yet supported -- see below */
+CALL PUTC(3FH);       /* prints '?' */

@@ -25,8 +25,13 @@ export type Proc = {
     returnType?: "byte" | "word" | "address";
     body: Item[];
     at?: number;
+    regs?: ParamReg[];
     pos: Pos;
 };
+
+export type ParamReg =
+    | "A" | "B" | "C" | "D" | "E" | "H" | "L"
+    | "BC" | "DE" | "HL";
 
 export type Stmt =
     | AssignStmt
@@ -60,7 +65,8 @@ export type Expr =
     | { kind: "index"; name: string; index: Expr; pos: Pos }
     | { kind: "call"; name: string; args: Expr[]; pos: Pos }
     | { kind: "bin"; op: BinOp; lhs: Expr; rhs: Expr; pos: Pos }
-    | { kind: "un"; op: UnOp; arg: Expr; pos: Pos };
+    | { kind: "un"; op: UnOp; arg: Expr; pos: Pos }
+    | { kind: "addrOf"; name: string; pos: Pos };
 
 export type BinOp =
     | "+" | "-" | "*" | "/" | "MOD"

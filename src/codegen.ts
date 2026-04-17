@@ -130,6 +130,7 @@ class Codegen {
 
         for (const d of this.topDecls) emitDecl(d, dataLabel(d.name));
         for (const proc of this.procs) {
+            if (proc.regs) continue;
             for (const item of proc.body) {
                 if (item.kind !== "decl") continue;
                 emitDecl(item, localLabel(proc.name, item.name));
@@ -272,21 +273,51 @@ class Codegen {
             throw new CodegenError(`not a procedure: '${name}'`, pos);
         }
         const proc = sym.proc;
+        const regs = proc.regs;
         for (let i = 0; i < args.length; i++) {
-            const paramName = proc.params[i]!;
-            const paramSym = this.res.scopeOf.get(proc)!.lookupLocal(paramName);
-            if (!paramSym || (paramSym.kind !== "param" && paramSym.kind !== "var")) {
-                throw new CodegenError(`cannot resolve param '${paramName}' of '${name}'`, pos);
-            }
             const pType = sym.sig.params[i] === "byte" ? "byte" : "word";
             this.evalExpr(args[i]!, pType);
-            const slot = symLabel(paramSym);
-            if (pType === "byte") this.line(`    sta  ${slot}`);
-            else this.line(`    shld ${slot}`);
+            if (regs) {
+                this.moveToReg(pType, regs[i]!, pos);
+            } else {
+                const paramName = proc.params[i]!;
+                const paramSym = this.res.scopeOf.get(proc)!.lookupLocal(paramName);
+                if (!paramSym || (paramSym.kind !== "param" && paramSym.kind !== "var")) {
+                    throw new CodegenError(`cannot resolve param '${paramName}' of '${name}'`, pos);
+                }
+                const slot = symLabel(paramSym);
+                if (pType === "byte") this.line(`    sta  ${slot}`);
+                else this.line(`    shld ${slot}`);
+            }
         }
         this.line(`    call ${procLabel(name)}`);
         if (!asExpr) {
             // result discarded if any
+        }
+    }
+
+    private moveToReg(width: "byte" | "word", reg: string, pos: Pos): void {
+        if (width === "byte") {
+            switch (reg) {
+                case "A": return;
+                case "B": this.line(`    mov  b, a`); return;
+                case "C": this.line(`    mov  c, a`); return;
+                case "D": this.line(`    mov  d, a`); return;
+                case "E": this.line(`    mov  e, a`); return;
+                case "H": this.line(`    mov  h, a`); return;
+                case "L": this.line(`    mov  l, a`); return;
+                default: throw new CodegenError(`internal: bad byte reg '${reg}'`, pos);
+            }
+        } else {
+            switch (reg) {
+                case "HL": return;
+                case "DE": this.line(`    xchg`); return;
+                case "BC":
+                    this.line(`    mov  b, h`);
+                    this.line(`    mov  c, l`);
+                    return;
+                default: throw new CodegenError(`internal: bad word reg '${reg}'`, pos);
+            }
         }
     }
 
@@ -382,6 +413,14 @@ class Codegen {
                 const ret = sym.sig.return;
                 if (want === "word" && ret === "byte") this.byteToWord();
                 if (want === "byte" && (ret === "word" || ret === "address")) this.wordToByte();
+                return;
+            }
+            case "addrOf": {
+                const sym = this.res.symOf.get(e);
+                if (!sym) throw new CodegenError(`unresolved addrOf '${e.name}'`, e.pos);
+                const label = symLabel(sym);
+                this.line(`    lxi  h, ${label}`);
+                if (want === "byte") this.wordToByte();
                 return;
             }
             case "un":

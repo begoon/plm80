@@ -91,9 +91,17 @@ class Parser {
         else if (this.isKw("WORD")) { this.eatKw("WORD"); returnType = "word"; }
         else if (this.isKw("ADDRESS")) { this.eatKw("ADDRESS"); returnType = "address"; }
         let at: number | undefined;
-        if (this.isKw("AT")) {
-            this.eatKw("AT");
-            at = this.parseAtAddress(procKw.pos);
+        let regs: import("./ast.ts").ParamReg[] | undefined;
+        while (this.isKw("AT") || this.isKw("REGS")) {
+            if (this.isKw("AT")) {
+                if (at !== undefined) throw new ParseError(`duplicate AT`, this.at().pos);
+                this.eatKw("AT");
+                at = this.parseAtAddress(procKw.pos);
+            } else {
+                if (regs !== undefined) throw new ParseError(`duplicate REGS`, this.at().pos);
+                this.eatKw("REGS");
+                regs = this.parseRegList(procKw.pos);
+            }
         }
         this.eatPunct(";");
 
@@ -120,6 +128,15 @@ class Parser {
                 }
             }
         }
+        if (regs !== undefined && at === undefined) {
+            throw new ParseError(`REGS requires AT(...) on procedure ${nameTok.text}`, nameTok.pos);
+        }
+        if (regs !== undefined && regs.length !== params.length) {
+            throw new ParseError(
+                `REGS has ${regs.length} registers but procedure ${nameTok.text} has ${params.length} parameters`,
+                nameTok.pos,
+            );
+        }
         const proc: Proc = {
             kind: "proc",
             name: nameTok.text,
@@ -129,6 +146,7 @@ class Parser {
         };
         if (returnType) proc.returnType = returnType;
         if (at !== undefined) proc.at = at;
+        if (regs !== undefined) proc.regs = regs;
         return proc;
     }
 
@@ -184,6 +202,25 @@ class Parser {
             if (at !== undefined) base.at = at;
             out.push(base);
         }
+    }
+
+    private parseRegList(errPos: Pos): import("./ast.ts").ParamReg[] {
+        this.eatPunct("(");
+        const regs: import("./ast.ts").ParamReg[] = [];
+        regs.push(this.parseReg(errPos));
+        while (this.isPunct(",")) { this.eatPunct(","); regs.push(this.parseReg(errPos)); }
+        this.eatPunct(")");
+        return regs;
+    }
+
+    private parseReg(errPos: Pos): import("./ast.ts").ParamReg {
+        const t = this.at();
+        if (t.kind !== "ident") throw new ParseError(`expected register name`, t.pos);
+        const name = t.text;
+        const valid = ["A", "B", "C", "D", "E", "H", "L", "BC", "DE", "HL"];
+        if (!valid.includes(name)) throw new ParseError(`'${name}' is not a valid register`, t.pos);
+        this.i++;
+        return name as import("./ast.ts").ParamReg;
     }
 
     private parseAtAddress(errPos: Pos): number {
@@ -415,6 +452,12 @@ class Parser {
         const t = this.at();
         if (t.kind === "number") { this.i++; return { kind: "num", value: t.value!, pos: t.pos }; }
         if (t.kind === "string") { this.i++; return { kind: "str", value: t.text, pos: t.pos }; }
+        if (this.isPunct(".")) {
+            const dot = this.at();
+            this.eatPunct(".");
+            const id = this.eatIdent();
+            return { kind: "addrOf", name: id.text, pos: dot.pos };
+        }
         if (this.isPunct("(")) {
             this.eatPunct("(");
             const e = this.expression();

@@ -142,6 +142,23 @@ class Analyzer {
             : { params: paramKinds as ScalarKind[] };
         this.res.sigOf.set(proc, sig);
 
+        if (proc.regs) {
+            const wordRegs = new Set(["BC", "DE", "HL"]);
+            const byteRegs = new Set(["A", "B", "C", "D", "E", "H", "L"]);
+            const seen = new Set<string>();
+            for (let i = 0; i < proc.regs.length; i++) {
+                const r = proc.regs[i]!;
+                if (seen.has(r)) throw new SemaError(`duplicate register '${r}' in REGS for '${proc.name}'`, proc.pos);
+                seen.add(r);
+                const pk = paramKinds[i]!;
+                if (pk === "byte") {
+                    if (!byteRegs.has(r)) throw new SemaError(`register '${r}' is not valid for BYTE parameter '${proc.params[i]}'`, proc.pos);
+                } else {
+                    if (!wordRegs.has(r)) throw new SemaError(`register '${r}' is not valid for WORD/ADDRESS parameter '${proc.params[i]}'`, proc.pos);
+                }
+            }
+        }
+
         const prev = parent.define(proc.name, { kind: "proc", proc, sig });
         if (prev) throw new SemaError(`duplicate declaration of '${proc.name}'`, proc.pos);
     }
@@ -313,6 +330,15 @@ class Analyzer {
                 for (const a of e.args) this.typeExpr(a, scope);
                 if (!sym.sig.return) throw new SemaError(`typeless procedure '${e.name}' has no value`, e.pos);
                 return { kind: sym.sig.return };
+            }
+            case "addrOf": {
+                const sym = scope.lookup(e.name);
+                if (!sym) throw new SemaError(`undefined identifier '${e.name}'`, e.pos);
+                this.res.symOf.set(e, sym);
+                if (sym.kind !== "var" && sym.kind !== "param" && sym.kind !== "proc") {
+                    throw new SemaError(`cannot take address of '${e.name}'`, e.pos);
+                }
+                return { kind: "address" };
             }
             case "un":
                 return this.typeExpr(e.arg, scope);

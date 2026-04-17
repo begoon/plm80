@@ -160,6 +160,83 @@ test("AT variable cannot also have INITIAL", () => {
     expect(() => compile("DECLARE X BYTE AT (1000H) INITIAL(5);")).toThrow();
 });
 
+test("REGS(C) loads byte arg into C before call", () => {
+    const out = compile(`
+        PUTC: PROCEDURE (CH) REGS(C) AT (0F809H);
+            DECLARE CH BYTE;
+        END PUTC;
+        CALL PUTC(65);
+    `);
+    expect(out).toMatch(/mvi\s+a,\s+41h/);
+    expect(out).toMatch(/mov\s+c,\s+a/);
+    expect(out).toMatch(/call\s+putc/);
+    expect(out).not.toMatch(/sta\s+putc_ch/);
+    expect(out).not.toMatch(/^putc_ch:/m);
+});
+
+test("REGS(HL) loads address arg into HL", () => {
+    const out = compile(`
+        PUTS: PROCEDURE (P) REGS(HL) AT (0F818H);
+            DECLARE P ADDRESS;
+        END PUTS;
+        DECLARE MSG BYTE(3) INITIAL(1, 2, 3);
+        CALL PUTS(.MSG);
+    `);
+    expect(out).toMatch(/lxi\s+h,\s+msg/);
+    expect(out).toMatch(/call\s+puts/);
+});
+
+test("REGS(DE) swaps HL to DE via xchg", () => {
+    const out = compile(`
+        FOO: PROCEDURE (P) REGS(DE) AT (0F000H);
+            DECLARE P ADDRESS;
+        END FOO;
+        DECLARE BUF BYTE(4);
+        CALL FOO(.BUF);
+    `);
+    expect(out).toMatch(/lxi\s+h,\s+buf/);
+    expect(out).toMatch(/^\s+xchg$/m);
+});
+
+test("REGS with wrong register width is rejected", () => {
+    expect(() => compile(`
+        FOO: PROCEDURE (P) REGS(C) AT (0F000H);
+            DECLARE P ADDRESS;
+        END FOO;
+    `)).toThrow();
+});
+
+test("REGS without AT is rejected", () => {
+    expect(() => compile(`
+        FOO: PROCEDURE (X) REGS(A);
+            DECLARE X BYTE;
+        END FOO;
+    `)).toThrow();
+});
+
+test("address-of a global returns its label in HL", () => {
+    const out = compile("DECLARE BUF BYTE(8); DECLARE P ADDRESS; P = .BUF;");
+    expect(out).toMatch(/lxi\s+h,\s+buf/);
+    expect(out).toMatch(/shld\s+p/);
+});
+
+test("hello-rk.plm assembles via asm8", () => {
+    const src = `
+        PUTS: PROCEDURE (P) REGS(HL) AT (0F818H);
+            DECLARE P ADDRESS;
+        END PUTS;
+        PUTC: PROCEDURE (CH) REGS(C) AT (0F809H);
+            DECLARE CH BYTE;
+        END PUTC;
+        DECLARE MSG BYTE(6) INITIAL(48H, 49H, 21H, 0DH, 0AH, 0);
+        CALL PUTS(.MSG);
+        CALL PUTC(3FH);
+    `;
+    const sections = asm(compile(src));
+    expect(sections.length).toBe(1);
+    expect(sections[0]!.data.length).toBeGreaterThan(0);
+});
+
 test("byte literal out of range is rejected", () => {
     expect(() => compile("DECLARE X BYTE; X = 300;")).toThrow(CodegenError);
 });

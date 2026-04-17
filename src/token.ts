@@ -10,6 +10,7 @@ export const KEYWORDS = [
     "PLUS", "MINUS", "EQ", "LT", "GT", "LE", "GE", "NE",
     "HIGH", "LOW",
     "STRUCTURE", "HALT", "ENABLE", "DISABLE",
+    "REGS",
 ] as const;
 
 export type Keyword = (typeof KEYWORDS)[number];
