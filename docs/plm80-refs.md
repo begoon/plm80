@@ -10,7 +10,7 @@ Both PL/M manuals are archived on bitsavers (`bitsavers.org/pdf/intel/`). Search
 
 ## Target assembler
 
-- **asm8** — https://github.com/begoon/asm8. Our codegen output must be valid asm8 input. Syntax quirks to verify (number literals, `org`/`equ`, label form, comment char) before we commit to a codegen style.
+- **asm8** — <https://github.com/begoon/asm8>. Our codegen output must be valid asm8 input. Syntax quirks to verify (number literals, `org`/`equ`, label form, comment char) before we commit to a codegen style.
 
 ## Useful corpora
 
