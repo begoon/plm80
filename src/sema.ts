@@ -354,6 +354,21 @@ class Analyzer {
                 if (!sym.sig.return) throw new SemaError(`typeless procedure '${e.name}' has no value`, e.pos);
                 return { kind: sym.sig.return };
             }
+            case "builtin": {
+                for (const a of e.args) this.typeExpr(a, scope);
+                switch (e.name) {
+                    case "LOW":
+                    case "HIGH":
+                        if (e.args.length !== 1) throw new SemaError(`${e.name} takes 1 argument`, e.pos);
+                        return { kind: "byte" };
+                    case "SHR": case "SHL": case "ROR": case "ROL": {
+                        if (e.args.length !== 2) throw new SemaError(`${e.name} takes 2 arguments`, e.pos);
+                        const valT = this.res.typeOf.get(e.args[0]!);
+                        return valT?.kind === "word" || valT?.kind === "address"
+                            ? { kind: "word" } : { kind: "byte" };
+                    }
+                }
+            }
             case "addrOf": {
                 const sym = scope.lookup(e.name);
                 if (!sym) throw new SemaError(`undefined identifier '${e.name}'`, e.pos);

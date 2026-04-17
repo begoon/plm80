@@ -204,6 +204,12 @@ class Parser {
         }
     }
 
+    private isBuiltin(name: string): boolean {
+        return name === "LOW" || name === "HIGH" ||
+            name === "SHR" || name === "SHL" ||
+            name === "ROR" || name === "ROL";
+    }
+
     private parseRegList(errPos: Pos): import("./ast.ts").ParamReg[] {
         this.eatPunct("(");
         const regs: import("./ast.ts").ParamReg[] = [];
@@ -490,6 +496,16 @@ class Parser {
             this.eatPunct(".");
             const id = this.eatIdent();
             return { kind: "addrOf", name: id.text, pos: dot.pos };
+        }
+        if (t.kind === "kw" && this.isBuiltin(t.text)) {
+            const name = t.text as import("./ast.ts").BuiltinName;
+            const pos = t.pos;
+            this.i++;
+            this.eatPunct("(");
+            const args: Expr[] = [this.expression()];
+            while (this.isPunct(",")) { this.eatPunct(","); args.push(this.expression()); }
+            this.eatPunct(")");
+            return { kind: "builtin", name, args, pos };
         }
         if (this.isPunct("(")) {
             this.eatPunct("(");

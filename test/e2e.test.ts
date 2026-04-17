@@ -104,6 +104,41 @@ test("DO CASE dispatches to the selected branch under rk86", () => {
     expect(out).not.toMatch(/ABCD/);
 }, 20_000);
 
+test("LOW / HIGH / SHR / SHL / ROR / ROL compute correctly under rk86", () => {
+    const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
+    const plm = join(dir, "bits.plm");
+    writeFileSync(plm,
+        `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
+         PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
+
+         DECLARE W WORD;
+         DECLARE X BYTE;
+
+         W = 0ABCDH;
+         CALL HEXB(HIGH(W));   /* AB */
+         CALL HEXB(LOW(W));    /*   CD */
+         CALL PUTC(20H);
+
+         X = 01H;
+         CALL HEXB(SHL(X, 3)); /* 08 */
+         CALL PUTC(20H);
+
+         X = 80H;
+         CALL HEXB(SHR(X, 3)); /* 10 */
+         CALL PUTC(20H);
+
+         X = 01H;
+         CALL HEXB(ROR(X, 1)); /* 80 */
+         CALL PUTC(20H);
+
+         X = 81H;
+         CALL HEXB(ROL(X, 1)); /* 03 */`,
+    );
+    const bin = compileToBin(plm);
+    const out = runUnderRk86(bin);
+    expect(out).toMatch(/ABCD 08 10 80 03/);
+}, 20_000);
+
 test("byte *, /, MOD helpers compute correct results under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "arith.plm");

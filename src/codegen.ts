@@ -541,6 +541,10 @@ class Codegen {
                 if (want === "byte") this.wordToByte();
                 return;
             }
+            case "builtin": {
+                this.emitBuiltin(e, want);
+                return;
+            }
             case "un":
                 this.evalExpr(e.arg, want);
                 if (e.op === "+") return;
@@ -626,6 +630,97 @@ class Codegen {
     private callRuntime(name: string): void {
         this.usedRuntime.add(name);
         this.line(`    call ${name}`);
+    }
+
+    private emitBuiltin(e: Extract<Expr, { kind: "builtin" }>, want: "byte" | "word"): void {
+        if (e.name === "LOW" || e.name === "HIGH") {
+            const arg = e.args[0]!;
+            const argT = this.res.typeOf.get(arg);
+            const argWide = argT?.kind === "word" || argT?.kind === "address";
+            if (argWide) {
+                this.evalExpr(arg, "word");
+                this.line(e.name === "LOW" ? `    mov  a, l` : `    mov  a, h`);
+            } else {
+                this.evalExpr(arg, "byte");
+                if (e.name === "HIGH") this.line(`    mvi  a, 00h`);
+            }
+            if (want === "word") this.byteToWord();
+            return;
+        }
+        const val = e.args[0]!;
+        const count = e.args[1]!;
+        const valT = this.res.typeOf.get(val);
+        const wide = valT?.kind === "word" || valT?.kind === "address";
+        this.evalExpr(val, wide ? "word" : "byte");
+        if (count.kind === "num") {
+            const n = count.value;
+            if (n < 0 || n > (wide ? 15 : 7)) {
+                throw new CodegenError(`${e.name} count out of range`, e.pos);
+            }
+            for (let i = 0; i < n; i++) this.emitShiftOnce(e.name, wide);
+        } else {
+            const loop = this.fresh(`${e.name.toLowerCase()}_loop`);
+            const done = this.fresh(`${e.name.toLowerCase()}_done`);
+            if (wide) this.line(`    push h`);
+            else this.line(`    push psw`);
+            this.evalExpr(count, "byte");
+            this.line(`    mov  c, a`);
+            if (wide) this.line(`    pop  h`);
+            else this.line(`    pop  psw`);
+            this.line(`${loop}:`);
+            this.line(`    mov  a, c`);
+            this.line(`    ora  a`);
+            this.line(`    jz   ${done}`);
+            this.emitShiftOnce(e.name, wide);
+            this.line(`    dcr  c`);
+            this.line(`    jmp  ${loop}`);
+            this.line(`${done}:`);
+        }
+        if (want === "byte" && wide) this.wordToByte();
+        if (want === "word" && !wide) this.byteToWord();
+    }
+
+    private emitShiftOnce(op: "SHR" | "SHL" | "ROR" | "ROL", wide: boolean): void {
+        if (!wide) {
+            switch (op) {
+                case "SHR": this.line(`    ora  a`); this.line(`    rar`); return;
+                case "SHL": this.line(`    add  a`); return;
+                case "ROR": this.line(`    rrc`); return;
+                case "ROL": this.line(`    rlc`); return;
+            }
+        }
+        switch (op) {
+            case "SHL":
+                this.line(`    dad  h`);
+                return;
+            case "SHR":
+                this.line(`    ora  a`);
+                this.line(`    mov  a, h`);
+                this.line(`    rar`);
+                this.line(`    mov  h, a`);
+                this.line(`    mov  a, l`);
+                this.line(`    rar`);
+                this.line(`    mov  l, a`);
+                return;
+            case "ROL": {
+                const skip = this.fresh("rol_skip");
+                this.line(`    dad  h`);
+                this.line(`    jnc  ${skip}`);
+                this.line(`    inr  l`);
+                this.line(`${skip}:`);
+                return;
+            }
+            case "ROR":
+                this.line(`    mov  a, l`);
+                this.line(`    rrc`);
+                this.line(`    mov  a, h`);
+                this.line(`    rar`);
+                this.line(`    mov  h, a`);
+                this.line(`    mov  a, l`);
+                this.line(`    rar`);
+                this.line(`    mov  l, a`);
+                return;
+        }
     }
 
     private emitWordBitwise(mne: string): void {

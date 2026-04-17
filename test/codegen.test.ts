@@ -181,6 +181,47 @@ test("DO I = a TO b BY step honors the user's step", () => {
     expect(sections.length).toBe(1);
 });
 
+test("LOW(word) extracts L via mov a, l", () => {
+    const out = compile("DECLARE W WORD; DECLARE B BYTE; B = LOW(W);");
+    expect(out).toMatch(/lhld\s+w/);
+    expect(out).toMatch(/mov\s+a,\s+l/);
+});
+
+test("HIGH(word) extracts H via mov a, h", () => {
+    const out = compile("DECLARE W WORD; DECLARE B BYTE; B = HIGH(W);");
+    expect(out).toMatch(/lhld\s+w/);
+    expect(out).toMatch(/mov\s+a,\s+h/);
+});
+
+test("SHR byte constant-count emits rar per bit", () => {
+    const out = compile("DECLARE X BYTE; X = SHR(X, 3);");
+    const rars = (out.match(/^\s+rar$/gm) ?? []).length;
+    expect(rars).toBe(3);
+});
+
+test("SHL byte constant-count emits add a per bit", () => {
+    const out = compile("DECLARE X BYTE; X = SHL(X, 2);");
+    const adds = (out.match(/^\s+add\s+a$/gm) ?? []).length;
+    expect(adds).toBeGreaterThanOrEqual(2);
+});
+
+test("ROR byte constant-count emits rrc per bit", () => {
+    const out = compile("DECLARE X BYTE; X = ROR(X, 1);");
+    expect(out).toMatch(/^\s+rrc$/m);
+});
+
+test("SHL word emits dad h per bit", () => {
+    const out = compile("DECLARE W WORD; W = SHL(W, 4);");
+    const dads = (out.match(/^\s+dad\s+h$/gm) ?? []).length;
+    expect(dads).toBe(4);
+});
+
+test("shift with variable count emits a runtime loop", () => {
+    const out = compile("DECLARE X BYTE; DECLARE N BYTE; X = SHR(X, N);");
+    expect(out).toMatch(/^L\d+_shr_loop:/m);
+    expect(out).toMatch(/dcr\s+c/);
+});
+
 test("DO CASE builds jump table and per-case bodies", () => {
     const out = compile(`
         DECLARE N BYTE; DECLARE X BYTE;

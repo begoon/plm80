@@ -78,7 +78,10 @@ export type Expr =
     | { kind: "call"; name: string; args: Expr[]; pos: Pos }
     | { kind: "bin"; op: BinOp; lhs: Expr; rhs: Expr; pos: Pos }
     | { kind: "un"; op: UnOp; arg: Expr; pos: Pos }
-    | { kind: "addrOf"; name: string; pos: Pos };
+    | { kind: "addrOf"; name: string; pos: Pos }
+    | { kind: "builtin"; name: BuiltinName; args: Expr[]; pos: Pos };
+
+export type BuiltinName = "LOW" | "HIGH" | "SHR" | "SHL" | "ROR" | "ROL";
 
 export type BinOp =
     | "+" | "-" | "*" | "/" | "MOD"
