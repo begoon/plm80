@@ -14,6 +14,7 @@ export type Decl = {
     name: string;
     type: PlmType;
     initial?: Expr[];
+    at?: number;
     pos: Pos;
 };
 
@@ -23,6 +24,7 @@ export type Proc = {
     params: string[];
     returnType?: "byte" | "word" | "address";
     body: Item[];
+    at?: number;
     pos: Pos;
 };
 

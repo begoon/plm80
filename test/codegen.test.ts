@@ -106,6 +106,60 @@ test("unsupported * operator is reported", () => {
     expect(() => compile("DECLARE X BYTE; X = X * 2;")).toThrow(CodegenError);
 });
 
+test("'>' is lowered via operand swap to '<'", () => {
+    const out = compile("DECLARE A BYTE; DECLARE B BYTE; DECLARE F BYTE; F = A > B;");
+    expect(out).toMatch(/jc\s+L\d+_ctrue/);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
+test("'<=' is lowered via operand swap to '>='", () => {
+    const out = compile("DECLARE A BYTE; DECLARE B BYTE; DECLARE F BYTE; F = A <= B;");
+    expect(out).toMatch(/jnc\s+L\d+_ctrue/);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
+test("AT variable emits equ, no storage reserved", () => {
+    const out = compile("DECLARE VRAM BYTE AT (8000H);");
+    expect(out).toMatch(/^vram equ 8000h$/m);
+    expect(out).not.toMatch(/^vram:\s+ds/m);
+});
+
+test("AT variable read and write use the absolute label", () => {
+    const out = compile("DECLARE PORT BYTE AT (0F3H); DECLARE X BYTE; X = PORT; PORT = 7;");
+    expect(out).toMatch(/^port equ 00F3h$/m);
+    expect(out).toMatch(/lda\s+port/);
+    expect(out).toMatch(/sta\s+port/);
+});
+
+test("AT procedure emits equ and no body", () => {
+    const out = compile(`
+        BIOSOUT: PROCEDURE (CH) BYTE AT (0F803H);
+            DECLARE CH BYTE;
+        END BIOSOUT;
+        CALL BIOSOUT(65);
+    `);
+    expect(out).toMatch(/^biosout equ 0F803h$/m);
+    expect(out).not.toMatch(/^biosout:\s*$/m);
+    expect(out).toMatch(/sta\s+biosout_ch/);
+    expect(out).toMatch(/call\s+biosout/);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
+test("AT procedure with body statements is rejected at parse time", () => {
+    expect(() => compile(`
+        FOO: PROCEDURE AT (0F000H);
+            RETURN;
+        END FOO;
+    `)).toThrow();
+});
+
+test("AT variable cannot also have INITIAL", () => {
+    expect(() => compile("DECLARE X BYTE AT (1000H) INITIAL(5);")).toThrow();
+});
+
 test("byte literal out of range is rejected", () => {
     expect(() => compile("DECLARE X BYTE; X = 300;")).toThrow(CodegenError);
 });

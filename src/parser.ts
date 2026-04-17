@@ -90,6 +90,11 @@ class Parser {
         if (this.isKw("BYTE")) { this.eatKw("BYTE"); returnType = "byte"; }
         else if (this.isKw("WORD")) { this.eatKw("WORD"); returnType = "word"; }
         else if (this.isKw("ADDRESS")) { this.eatKw("ADDRESS"); returnType = "address"; }
+        let at: number | undefined;
+        if (this.isKw("AT")) {
+            this.eatKw("AT");
+            at = this.parseAtAddress(procKw.pos);
+        }
         this.eatPunct(";");
 
         const body: Item[] = [];
@@ -105,14 +110,26 @@ class Parser {
             }
         }
         this.eatPunct(";");
-        return {
+        if (at !== undefined) {
+            for (const item of body) {
+                if (item.kind !== "decl") {
+                    throw new ParseError(
+                        `PROCEDURE ${nameTok.text} AT(...) must have no statements; body may only DECLARE its parameters`,
+                        item.pos,
+                    );
+                }
+            }
+        }
+        const proc: Proc = {
             kind: "proc",
             name: nameTok.text,
             params,
-            ...(returnType ? { returnType } : {}),
             body,
             pos: nameTok.pos,
         };
+        if (returnType) proc.returnType = returnType;
+        if (at !== undefined) proc.at = at;
+        return proc;
     }
 
     private declarations(out: Item[]): void {
@@ -134,7 +151,19 @@ class Parser {
         }
         const type = this.typeSpec();
         let initial: Expr[] | undefined;
+        let at: number | undefined;
+        if (this.isKw("AT")) {
+            this.eatKw("AT");
+            at = this.parseAtAddress(kw.pos);
+            if (names.length > 1) {
+                throw new ParseError(
+                    `AT not allowed with multi-name DECLARE; declare names separately`,
+                    kw.pos,
+                );
+            }
+        }
         if (this.isKw("INITIAL")) {
+            if (at !== undefined) throw new ParseError(`INITIAL cannot combine with AT`, kw.pos);
             this.eatKw("INITIAL");
             this.eatPunct("(");
             initial = [this.expression()];
@@ -150,11 +179,22 @@ class Parser {
         this.eatPunct(";");
 
         for (const n of names) {
-            const d: Decl = initial
-                ? { kind: "decl", name: n.name, type, initial, pos: n.pos }
-                : { kind: "decl", name: n.name, type, pos: n.pos };
-            out.push(d);
+            const base: Decl = { kind: "decl", name: n.name, type, pos: n.pos };
+            if (initial) base.initial = initial;
+            if (at !== undefined) base.at = at;
+            out.push(base);
         }
+    }
+
+    private parseAtAddress(errPos: Pos): number {
+        let hadParen = false;
+        if (this.isPunct("(")) { this.eatPunct("("); hadParen = true; }
+        const t = this.at();
+        if (t.kind !== "number") throw new ParseError(`AT address must be a numeric literal`, t.pos);
+        this.i++;
+        if (hadParen) this.eatPunct(")");
+        if (t.value === undefined) throw new ParseError(`AT address missing value`, errPos);
+        return t.value;
     }
 
     private typeSpec(): PlmType {

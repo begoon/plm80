@@ -20,7 +20,7 @@ export type Sym =
     | { kind: "proc"; proc: Proc; sig: ProcSig }
     | { kind: "label"; name: string; pos: Pos };
 
-export type Storage = "global" | "local";
+export type Storage = "global" | "local" | "absolute";
 
 export type ProcSig = { params: ScalarKind[]; return?: ScalarKind };
 
@@ -77,8 +77,9 @@ class Analyzer {
 
     private hoistDecls(items: Item[], scope: Scope, storage: Storage): void {
         for (const item of items) {
-            if (item.kind === "decl") this.defineVar(item, scope, storage);
-            else if (item.kind === "proc") this.defineProc(item, scope);
+            if (item.kind === "decl") {
+                this.defineVar(item, scope, item.at !== undefined ? "absolute" : storage);
+            } else if (item.kind === "proc") this.defineProc(item, scope);
             else if (item.kind === "label") this.defineLabel(item.name, item.pos, scope);
         }
     }
