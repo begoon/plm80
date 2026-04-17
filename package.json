@@ -1,0 +1,17 @@
+{
+  "name": "plm-80",
+  "version": "0.0.0",
+  "description": "PL/M-80 compiler for bare Intel 8080, emitting asm8-compatible assembly",
+  "module": "src/cli.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "plm": "bun run src/cli.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  }
+}
