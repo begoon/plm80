@@ -15,7 +15,7 @@ export type ResolvedType =
     | { kind: "proc"; params: ScalarKind[]; return?: ScalarKind };
 
 export type Sym =
-    | { kind: "var"; decl: Decl; storage: Storage }
+    | { kind: "var"; decl: Decl; storage: Storage; proc?: Proc }
     | { kind: "param"; decl: Decl; index: number; proc: Proc }
     | { kind: "proc"; proc: Proc; sig: ProcSig }
     | { kind: "label"; name: string; pos: Pos };
@@ -83,8 +83,11 @@ class Analyzer {
         }
     }
 
-    private defineVar(d: Decl, scope: Scope, storage: Storage): void {
-        const prev = scope.define(d.name, { kind: "var", decl: d, storage });
+    private defineVar(d: Decl, scope: Scope, storage: Storage, proc?: Proc): void {
+        const sym: Sym = proc
+            ? { kind: "var", decl: d, storage, proc }
+            : { kind: "var", decl: d, storage };
+        const prev = scope.define(d.name, sym);
         if (prev) throw new SemaError(`duplicate declaration of '${d.name}'`, d.pos);
     }
 
@@ -123,7 +126,7 @@ class Analyzer {
                 });
                 if (prev) throw new SemaError(`duplicate parameter '${item.name}'`, item.pos);
             } else {
-                this.defineVar(item, procScope, "local");
+                this.defineVar(item, procScope, "local", proc);
             }
         }
         for (const item of proc.body) {

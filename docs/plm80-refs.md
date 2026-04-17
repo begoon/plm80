@@ -32,7 +32,40 @@ Both PL/M manuals are archived on bitsavers (`bitsavers.org/pdf/intel/`). Search
 
 ## Subset for v0
 
-BYTE/WORD only; no BASED, no structures, no `AT`, no reentrant, no interrupt, no `LITERALLY`.
+BYTE/WORD only; no BASED, no structures, no reentrant, no interrupt, no `LITERALLY`.
 Statements: assignment, `IF/THEN/ELSE`, `DO...END`, `DO WHILE`, `CALL`, `RETURN`.
 Expressions: `+ - * / MOD`, `AND OR XOR NOT`, comparisons.
 Single module, no linking.
+
+## External entry points via `AT` (v0 requirement)
+
+Bare 8080 targets (ROM monitors, BDOS-like services) need a way to call routines at known ROM/RAM addresses without a linker. PL/M-80 uses the `AT` clause for this. Required forms:
+
+```pl/m
+/* Typeless external procedure at a fixed address */
+BIOSOUT: PROCEDURE (CH) EXTERNAL AT (0F803H);
+    DECLARE CH BYTE;
+END BIOSOUT;
+
+/* Typed external procedure */
+BIOSCALL: PROCEDURE BYTE EXTERNAL AT (0F808H);
+END BIOSCALL;
+
+/* Alternative shorthand (non-standard, seen in some PL/M-80 code) */
+DECLARE BIOSCALL PROCEDURE BYTE AT 0F808H;
+```
+
+Call sites:
+
+```pl/m
+CALL BIOSOUT(65);        /* typeless */
+RESULT = BIOSCALL;       /* typed, zero args -- proc name used as value */
+```
+
+Codegen for `AT`-bound procedures:
+
+- No body emitted. Instead, a single `equ` at the top: `BIOSCALL equ 0F808h`.
+- `CALL BIOSCALL` → `call BIOSCALL`. Assembler resolves via the `equ`.
+- Arguments go through the same static param slots as for normal procs. But since there's no body, the *callee* must be using a documented ABI (registers or well-known addresses) — we need to honor that. This means the `AT` form needs an **ABI annotation** beyond pure PL/M: e.g., "args passed in A, result in A". Decide syntax later; for now, document that plain `CALL BIOSOUT(ch)` will pass `ch` via a static slot `BIOSOUT_CH:`, which the external target is expected to read. (Not realistic for BDOS-style routines that expect A/C/E; will likely need an `INTEL` or `REGS` extension attribute.)
+
+`AT` also applies to variables (`DECLARE VRAM BYTE AT 8000H;`) — codegen emits `VRAM equ 8000h` and treats it as an absolute address when loading/storing. Support both procedure and variable forms in v0.
