@@ -26,19 +26,19 @@ See [`docs/plm80-refs.md`](docs/plm80-refs.md) for the Intel manuals we follow (
 | Types | `BYTE`, `WORD`, `ADDRESS`, fixed-size `(n)` arrays of any scalar |
 | Declarations | `DECLARE name TYPE`, multi-name `DECLARE (a, b, c) TYPE`, `INITIAL(...)` with numeric or string values (strings only in byte arrays), `AT (addr)` for absolute placement |
 | Procedures | `NAME: PROCEDURE (params) [type] [REGS(regs)] [AT (addr)]; ... END NAME;`, params typed via body `DECLARE`s |
-| Statements | assignment (single + multi-target), indexed assignment, `IF/THEN/ELSE`, `DO ... END`, `DO WHILE cond`, `CALL name(args)`, `RETURN [value]`, labels + `GO TO` / `GOTO` |
-| Expressions | `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `+` `-`, `(` `)` grouping, `.NAME` address-of, array indexing, procedure calls |
+| Statements | assignment (single + multi-target), indexed assignment, `IF/THEN/ELSE`, `DO ... END`, `DO WHILE cond`, `DO I = a TO b [BY s]`, `DO CASE expr`, `CALL name(args)`, `RETURN [value]`, labels + `GO TO` / `GOTO` |
+| Expressions | `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `+` `-`, `(` `)` grouping, `.NAME` address-of, array indexing, procedure calls, `LOW` / `HIGH`, `SHR` / `SHL` / `ROR` / `ROL` |
+| Macros | `DECLARE NAME LITERALLY 'replacement';` — textual token-level substitution |
 
 ### Not yet implemented
 
 These either raise a `CodegenError` with a clear message, or are rejected at parse/sema:
 
 - Nested procedures, `REENTRANT`, `INTERRUPT n`.
-- `BASED` pointers, `STRUCTURE`, `LITERALLY`.
-- `DO CASE`, `DO I = a TO b [BY s]`.
+- `BASED` pointers, `STRUCTURE`.
 - Whole-array arguments (must pass an address via `.NAME`).
 - Multi-register structured returns (e.g. monitor's `inpblock` which returns `HL` + `DE` + `BC`).
-- Built-ins: `LOW` / `HIGH` can be expressed as asm8 functions in the output but aren't yet wired as PL/M source operators; also `SHR`, `SHL`, `ROL`, `ROR`, `DEC`, `MOV`, `MOVE`, `LENGTH`, `LAST`, `SIZE`, `TIME`.
+- Built-ins: `DEC`, `MOV`, `MOVE`, `LENGTH`, `LAST`, `SIZE`, `TIME`.
 
 ---
 
@@ -215,14 +215,11 @@ plm-80/
 
 Rough ordering, highest leverage first:
 
-1. Built-ins that are free from asm8: `LOW` / `HIGH` as PL/M-level operators.
-2. Shift/rotate built-ins: `SHR`, `SHL`, `ROL`, `ROR`, `DEC`.
-3. `INTERRUPT n` procs — register save/restore prologue + `ei / ret`.
-4. `REENTRANT` — stack frames, enabling recursion.
-5. `DO CASE expr;` and `DO I = a TO b [BY s];`.
-6. Structured returns for BIOS routines like `inpblock` (HL+DE+BC tuple).
-7. `BASED` pointers and `STRUCTURE`.
-8. `LITERALLY` macros (preprocess pass).
+1. `REENTRANT` — stack frames, enabling recursion. Requires refactoring every storage-access site in codegen to route through a helper that switches between static-slot and SP-relative addressing. Naive "callee-saves" does not work for genuine recursion.
+2. `INTERRUPT n` procs — register save/restore prologue + `ei / ret`.
+3. Structured returns for BIOS routines like `inpblock` (HL+DE+BC tuple).
+4. `BASED` pointers and `STRUCTURE`.
+5. `DEC` and the remaining `MOV` / `MOVE` / `LENGTH` / `LAST` / `SIZE` / `TIME` built-ins.
 
 ---
 

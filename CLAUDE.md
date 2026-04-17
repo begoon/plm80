@@ -43,9 +43,9 @@ Sema enforces register width matches param type; `REGS` without `AT` is a parse 
 
 ## v0 subset
 
-**Supported:** `DECLARE` (scalar + `(n)` arrays for BYTE/WORD/ADDRESS, `INITIAL` with numbers or strings for byte arrays, multi-name `DECLARE (A, B, ...) TYPE;`, `AT (addr)`), `PROCEDURE`/`END` (with params, return type, `AT`, `REGS`, and body `DECLARE`s for param types), assignment (single + multi-target, scalar + indexed LHS), `IF/THEN/ELSE`, `DO...END`, `DO WHILE`, `CALL` with args, `RETURN` with value, labels + `GO TO` / `GOTO`, `.` address-of.
+**Supported:** `DECLARE` (scalar + `(n)` arrays for BYTE/WORD/ADDRESS, `INITIAL` with numbers or strings for byte arrays, multi-name `DECLARE (A, B, ...) TYPE;`, `AT (addr)`, `LITERALLY` via token-stream preprocess), `PROCEDURE`/`END` (with params, return type, `AT`, `REGS`, and body `DECLARE`s for param types), assignment (single + multi-target, scalar + indexed LHS), `IF/THEN/ELSE`, `DO...END`, `DO WHILE`, `DO I = a TO b [BY s]`, `DO CASE expr`, `CALL` with args, `RETURN` with value, labels + `GO TO` / `GOTO`, `.` address-of.
 
-Expressions: `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `-` and `+`.
+Expressions: `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `-` and `+`, built-ins `LOW(x)` / `HIGH(x)` / `SHR(x,n)` / `SHL(x,n)` / `ROR(x,n)` / `ROL(x,n)`.
 
 **Codegen gaps raising `CodegenError`:** string expressions (except as INITIAL values for byte arrays).
 
