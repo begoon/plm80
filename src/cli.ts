@@ -4,8 +4,13 @@ import { analyze, SemaError } from "./sema.ts";
 import { generate, CodegenError } from "./codegen.ts";
 
 function usage(): never {
-    console.error("usage: bun run plm <input.plm> [-o <out.asm>] [--tokens] [--ast] [--check] [--org <hex>]");
+    console.error("usage: bun run plm <input.plm> [-o <out.asm>] [--tokens] [--ast] [--check] [--org <hex>] [--stack <hex>]");
     process.exit(2);
+}
+
+function parseAddr(v: string): number {
+    const raw = v.replace(/h$/i, "").replace(/^0x/i, "");
+    return parseInt(raw, 16);
 }
 
 const argv = process.argv.slice(2);
@@ -17,6 +22,7 @@ let dumpTokens = false;
 let dumpAst = false;
 let checkOnly = false;
 let origin: number | undefined;
+let stack: number | undefined;
 
 for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -24,11 +30,8 @@ for (let i = 0; i < argv.length; i++) {
     else if (a === "--tokens") { dumpTokens = true; }
     else if (a === "--ast") { dumpAst = true; }
     else if (a === "--check") { checkOnly = true; }
-    else if (a === "--org") {
-        const v = argv[++i];
-        if (!v) usage();
-        origin = parseInt(v.replace(/h$/i, ""), v.toLowerCase().startsWith("0x") ? 16 : /[a-f]/i.test(v) || /h$/i.test(v) ? 16 : 10);
-    }
+    else if (a === "--org") { const v = argv[++i]; if (!v) usage(); origin = parseAddr(v); }
+    else if (a === "--stack") { const v = argv[++i]; if (!v) usage(); stack = parseAddr(v); }
     else if (a.startsWith("-")) { console.error(`unknown flag: ${a}`); usage(); }
     else { input = a; }
 }
@@ -53,7 +56,10 @@ try {
     }
     const res = analyze(ast);
     if (checkOnly) { process.exit(0); }
-    const asm = generate(ast, res, origin !== undefined ? { origin } : {});
+    const cgOpts: { origin?: number; stack?: number } = {};
+    if (origin !== undefined) cgOpts.origin = origin;
+    if (stack !== undefined) cgOpts.stack = stack;
+    const asm = generate(ast, res, cgOpts);
     if (!output) output = input.replace(/\.plm$/i, "") + ".asm";
     await Bun.write(output, asm);
     process.exit(0);

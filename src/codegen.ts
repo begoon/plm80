@@ -6,6 +6,7 @@ import type { Resolution, Sym } from "./sema.ts";
 
 export type CodegenOptions = {
     origin?: number;
+    stack?: number;
 };
 
 export class CodegenError extends Error {
@@ -38,6 +39,7 @@ class Codegen {
         this.emitAbsoluteEqus();
         this.line(`    org  ${hex16(origin)}`);
         this.line(`start:`);
+        if (this.opts.stack !== undefined) this.line(`    lxi  sp, ${hex16(this.opts.stack)}`);
 
         for (const item of this.program.items) {
             if (item.kind === "decl") this.topDecls.push(item);
@@ -115,13 +117,30 @@ class Codegen {
             } else {
                 const unit = t.element === "byte" ? 1 : 2;
                 if (d.initial) {
-                    const parts = d.initial.map((e) =>
-                        unit === 1 ? this.constByte(e, d.pos) : this.constWord(e, d.pos),
-                    );
-                    const dir = unit === 1 ? "db" : "dw";
-                    this.line(`${labelName}: ${dir} ${parts.join(", ")}`);
-                    const pad = t.size - d.initial.length;
-                    if (pad > 0) this.line(`    ds ${pad * unit}`);
+                    if (unit === 1) {
+                        const parts: string[] = [];
+                        let used = 0;
+                        for (const e of d.initial) {
+                            if (e.kind === "str") {
+                                if (e.value.includes('"')) {
+                                    throw new CodegenError(`string INITIAL containing '"' is not yet supported`, e.pos);
+                                }
+                                parts.push(`"${e.value}"`);
+                                used += e.value.length;
+                            } else {
+                                parts.push(this.constByte(e, d.pos));
+                                used += 1;
+                            }
+                        }
+                        this.line(`${labelName}: db ${parts.join(", ")}`);
+                        const pad = t.size - used;
+                        if (pad > 0) this.line(`    ds ${pad}`);
+                    } else {
+                        const parts = d.initial.map((e) => this.constWord(e, d.pos));
+                        this.line(`${labelName}: dw ${parts.join(", ")}`);
+                        const pad = t.size - d.initial.length;
+                        if (pad > 0) this.line(`    ds ${pad * 2}`);
+                    }
                 } else {
                     this.line(`${labelName}: ds ${t.size * unit}`);
                 }
