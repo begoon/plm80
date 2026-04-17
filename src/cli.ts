@@ -1,7 +1,8 @@
 import { tokenize } from "./lexer.ts";
+import { parse, ParseError } from "./parser.ts";
 
 function usage(): never {
-    console.error("usage: bun run plm <input.plm> [-o <out.asm>] [--tokens]");
+    console.error("usage: bun run plm <input.plm> [-o <out.asm>] [--tokens] [--ast]");
     process.exit(2);
 }
 
@@ -11,11 +12,13 @@ if (argv.length === 0) usage();
 let input: string | undefined;
 let output: string | undefined;
 let dumpTokens = false;
+let dumpAst = false;
 
 for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === "-o") { output = argv[++i]; }
     else if (a === "--tokens") { dumpTokens = true; }
+    else if (a === "--ast") { dumpAst = true; }
     else if (a.startsWith("-")) { console.error(`unknown flag: ${a}`); usage(); }
     else { input = a; }
 }
@@ -32,6 +35,19 @@ if (dumpTokens) {
     process.exit(0);
 }
 
-if (!output) output = input.replace(/\.plm$/i, "") + ".asm";
-console.error(`codegen not implemented; would write ${output}`);
-process.exit(1);
+try {
+    const ast = parse(tokens);
+    if (dumpAst) {
+        console.log(JSON.stringify(ast, null, 2));
+        process.exit(0);
+    }
+    if (!output) output = input.replace(/\.plm$/i, "") + ".asm";
+    console.error(`codegen not implemented; would write ${output}`);
+    process.exit(1);
+} catch (e) {
+    if (e instanceof ParseError) {
+        console.error(`${input}:${e.message}`);
+        process.exit(1);
+    }
+    throw e;
+}

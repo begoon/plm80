@@ -1,0 +1,20 @@
+/*  sum the first N bytes of a buffer  */
+
+DECLARE BUF BYTE(16);
+DECLARE N BYTE INITIAL(10);
+
+SUM: PROCEDURE(P, COUNT) BYTE;
+    DECLARE (P, COUNT) BYTE;
+    DECLARE I BYTE;
+    DECLARE ACC BYTE;
+    ACC = 0;
+    I = 0;
+    DO WHILE I < COUNT;
+        ACC = ACC + BUF(I);
+        I = I + 1;
+    END;
+    RETURN ACC;
+END SUM;
+
+DECLARE RESULT BYTE;
+RESULT = SUM(BUF, N);

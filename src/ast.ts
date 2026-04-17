@@ -1,21 +1,18 @@
 import type { Pos } from "./token.ts";
 
-export type PlmType = "BYTE" | "WORD" | "ADDRESS";
+export type PlmType =
+    | { kind: "byte" }
+    | { kind: "word" }
+    | { kind: "address" }
+    | { kind: "array"; element: "byte" | "word" | "address"; size: number };
 
-export type Node =
-    | Program
-    | Decl
-    | Proc
-    | Stmt
-    | Expr;
-
-export type Program = { kind: "program"; items: (Decl | Proc | Stmt)[]; pos: Pos };
+export type Program = { kind: "program"; items: Item[]; pos: Pos };
+export type Item = Decl | Proc | Stmt;
 
 export type Decl = {
     kind: "decl";
     name: string;
     type: PlmType;
-    arraySize?: number;
     initial?: Expr[];
     pos: Pos;
 };
@@ -23,28 +20,49 @@ export type Decl = {
 export type Proc = {
     kind: "proc";
     name: string;
-    params: { name: string; type: PlmType }[];
-    returnType?: PlmType;
-    body: Stmt[];
+    params: string[];
+    returnType?: "byte" | "word" | "address";
+    body: Item[];
     pos: Pos;
 };
 
 export type Stmt =
-    | { kind: "assign"; target: Expr; value: Expr; pos: Pos }
-    | { kind: "if"; cond: Expr; then: Stmt[]; else?: Stmt[]; pos: Pos }
-    | { kind: "do"; body: Stmt[]; pos: Pos }
-    | { kind: "while"; cond: Expr; body: Stmt[]; pos: Pos }
-    | { kind: "call"; name: string; args: Expr[]; pos: Pos }
-    | { kind: "return"; value?: Expr; pos: Pos };
+    | AssignStmt
+    | IfStmt
+    | DoStmt
+    | WhileStmt
+    | CallStmt
+    | ReturnStmt
+    | GotoStmt
+    | LabelStmt
+    | NullStmt;
+
+export type AssignStmt = { kind: "assign"; targets: LValue[]; value: Expr; pos: Pos };
+export type IfStmt = { kind: "if"; cond: Expr; then: Stmt; else?: Stmt; pos: Pos };
+export type DoStmt = { kind: "do"; body: Item[]; pos: Pos };
+export type WhileStmt = { kind: "while"; cond: Expr; body: Item[]; pos: Pos };
+export type CallStmt = { kind: "call"; name: string; args: Expr[]; pos: Pos };
+export type ReturnStmt = { kind: "return"; value?: Expr; pos: Pos };
+export type GotoStmt = { kind: "goto"; label: string; pos: Pos };
+export type LabelStmt = { kind: "label"; name: string; pos: Pos };
+export type NullStmt = { kind: "null"; pos: Pos };
+
+export type LValue =
+    | { kind: "ref"; name: string; pos: Pos }
+    | { kind: "index"; name: string; index: Expr; pos: Pos };
 
 export type Expr =
     | { kind: "num"; value: number; pos: Pos }
+    | { kind: "str"; value: string; pos: Pos }
     | { kind: "ref"; name: string; pos: Pos }
     | { kind: "index"; name: string; index: Expr; pos: Pos }
+    | { kind: "call"; name: string; args: Expr[]; pos: Pos }
     | { kind: "bin"; op: BinOp; lhs: Expr; rhs: Expr; pos: Pos }
-    | { kind: "un"; op: "NOT" | "-"; arg: Expr; pos: Pos };
+    | { kind: "un"; op: UnOp; arg: Expr; pos: Pos };
 
 export type BinOp =
     | "+" | "-" | "*" | "/" | "MOD"
     | "AND" | "OR" | "XOR"
     | "=" | "<>" | "<" | ">" | "<=" | ">=";
+
+export type UnOp = "NOT" | "-" | "+";
