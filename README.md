@@ -1,6 +1,6 @@
-# plm-80
+# PL/M-80
 
-A compiler for a useful subset of **PL/M-80** targeting the bare **Intel 8080**. Written in TypeScript on the Bun runtime, emits assembly in the dialect accepted by [asm8](https://github.com/begoon/asm8), and is verified end-to-end against the [Radio-86RK](https://github.com/begoon/rk86) monitor ROM.
+A compiler for a useful subset of **PL/M-80** targeting the bare **Intel 8080**. Written in TypeScript on the Bun runtime, emits assembly in the dialect accepted by [asm8](https://github.com/begoon/asm8), and is verified end-to-end against the [Radio-86RK](https://github.com/begoon/rk86-monitor) monitor ROM.
 
 ---
 
@@ -27,13 +27,12 @@ See [`docs/plm80-refs.md`](docs/plm80-refs.md) for the Intel manuals we follow (
 | Declarations | `DECLARE name TYPE`, multi-name `DECLARE (a, b, c) TYPE`, `INITIAL(...)` with numeric or string values (strings only in byte arrays), `AT (addr)` for absolute placement |
 | Procedures | `NAME: PROCEDURE (params) [type] [REGS(regs)] [AT (addr)]; ... END NAME;`, params typed via body `DECLARE`s |
 | Statements | assignment (single + multi-target), indexed assignment, `IF/THEN/ELSE`, `DO ... END`, `DO WHILE cond`, `CALL name(args)`, `RETURN [value]`, labels + `GO TO` / `GOTO` |
-| Expressions | `+ - AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `+` `-`, `(` `)` grouping, `.NAME` address-of, array indexing, procedure calls |
+| Expressions | `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `+` `-`, `(` `)` grouping, `.NAME` address-of, array indexing, procedure calls |
 
 ### Not yet implemented
 
 These either raise a `CodegenError` with a clear message, or are rejected at parse/sema:
 
-- `*` `/` `MOD` — need a runtime library of 8/16-bit multiply/divide helpers.
 - Nested procedures, `REENTRANT`, `INTERRUPT n`.
 - `BASED` pointers, `STRUCTURE`, `LITERALLY`.
 - `DO CASE`, `DO I = a TO b [BY s]`.
@@ -216,15 +215,14 @@ plm-80/
 
 Rough ordering, highest leverage first:
 
-1. `*` `/` `MOD` with hand-written 8/16-bit runtime helpers (`runtime/mul8.asm`, `runtime/div8.asm`) emitted inline when referenced.
-2. Built-ins that are free from asm8: `LOW` / `HIGH` as PL/M-level operators.
-3. Shift/rotate built-ins: `SHR`, `SHL`, `ROL`, `ROR`, `DEC`.
-4. `INTERRUPT n` procs — register save/restore prologue + `ei / ret`.
-5. `REENTRANT` — stack frames, enabling recursion.
-6. `DO CASE expr;` and `DO I = a TO b [BY s];`.
-7. Structured returns for BIOS routines like `inpblock` (HL+DE+BC tuple).
-8. `BASED` pointers and `STRUCTURE`.
-9. `LITERALLY` macros (preprocess pass).
+1. Built-ins that are free from asm8: `LOW` / `HIGH` as PL/M-level operators.
+2. Shift/rotate built-ins: `SHR`, `SHL`, `ROL`, `ROR`, `DEC`.
+3. `INTERRUPT n` procs — register save/restore prologue + `ei / ret`.
+4. `REENTRANT` — stack frames, enabling recursion.
+5. `DO CASE expr;` and `DO I = a TO b [BY s];`.
+6. Structured returns for BIOS routines like `inpblock` (HL+DE+BC tuple).
+7. `BASED` pointers and `STRUCTURE`.
+8. `LITERALLY` macros (preprocess pass).
 
 ---
 

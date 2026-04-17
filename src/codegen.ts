@@ -3,6 +3,7 @@ import type {
     AssignStmt, BinOp, Decl, Expr, Item, LValue, PlmType, Proc, Program, Stmt,
 } from "./ast.ts";
 import type { Resolution, Sym } from "./sema.ts";
+import { RUNTIME } from "./runtime.ts";
 
 export type CodegenOptions = {
     origin?: number;
@@ -26,6 +27,7 @@ class Codegen {
     private procs: Proc[] = [];
     private topDecls: Decl[] = [];
     private currentProc: Proc | null = null;
+    private usedRuntime = new Set<string>();
 
     constructor(
         private readonly program: Program,
@@ -52,6 +54,13 @@ class Codegen {
             if (proc.at !== undefined) continue;
             this.blank();
             this.emitProc(proc);
+        }
+
+        for (const name of this.usedRuntime) {
+            this.blank();
+            const body = RUNTIME[name];
+            if (!body) throw new Error(`internal: unknown runtime helper '${name}'`);
+            for (const line of body.split("\n")) this.line(line);
         }
 
         this.blank();
@@ -495,6 +504,9 @@ class Codegen {
                 case "AND": this.line(`    ana  b`); break;
                 case "OR":  this.line(`    ora  b`); break;
                 case "XOR": this.line(`    xra  b`); break;
+                case "*":   this.callRuntime("rt_mul8"); break;
+                case "/":   this.callRuntime("rt_div8"); break;
+                case "MOD": this.callRuntime("rt_mod8"); break;
                 default: throw new CodegenError(`operator '${op}' not yet implemented for BYTE`, pos);
             }
         } else {
@@ -513,9 +525,17 @@ class Codegen {
                 case "AND": this.emitWordBitwise("ana"); break;
                 case "OR":  this.emitWordBitwise("ora"); break;
                 case "XOR": this.emitWordBitwise("xra"); break;
+                case "*":   this.callRuntime("rt_mul16"); break;
+                case "/":   this.callRuntime("rt_div16"); break;
+                case "MOD": this.callRuntime("rt_mod16"); break;
                 default: throw new CodegenError(`operator '${op}' not yet implemented for WORD`, pos);
             }
         }
+    }
+
+    private callRuntime(name: string): void {
+        this.usedRuntime.add(name);
+        this.line(`    call ${name}`);
     }
 
     private emitWordBitwise(mne: string): void {

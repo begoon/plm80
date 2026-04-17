@@ -102,8 +102,69 @@ test("INITIAL packs values into db", () => {
     expect(out).toMatch(/a:\s+db\s+01h,\s+02h,\s+03h,\s+04h/);
 });
 
-test("unsupported * operator is reported", () => {
-    expect(() => compile("DECLARE X BYTE; X = X * 2;")).toThrow(CodegenError);
+test("byte '*' emits call rt_mul8 and includes the helper", () => {
+    const out = compile("DECLARE X BYTE; X = X * 2;");
+    expect(out).toMatch(/call\s+rt_mul8/);
+    expect(out).toMatch(/^rt_mul8:/m);
+});
+
+test("byte '/' emits call rt_div8", () => {
+    const out = compile("DECLARE X BYTE; X = X / 3;");
+    expect(out).toMatch(/call\s+rt_div8/);
+    expect(out).toMatch(/^rt_div8:/m);
+});
+
+test("byte 'MOD' emits call rt_mod8", () => {
+    const out = compile("DECLARE X BYTE; X = X MOD 7;");
+    expect(out).toMatch(/call\s+rt_mod8/);
+    expect(out).toMatch(/^rt_mod8:/m);
+});
+
+test("word '*' emits call rt_mul16", () => {
+    const out = compile("DECLARE W WORD; W = W * 1000;");
+    expect(out).toMatch(/call\s+rt_mul16/);
+    expect(out).toMatch(/^rt_mul16:/m);
+});
+
+test("word '/' emits call rt_div16", () => {
+    const out = compile("DECLARE W WORD; W = W / 1000;");
+    expect(out).toMatch(/call\s+rt_div16/);
+    expect(out).toMatch(/^rt_div16:/m);
+});
+
+test("word 'MOD' emits call rt_mod16", () => {
+    const out = compile("DECLARE W WORD; W = W MOD 1000;");
+    expect(out).toMatch(/call\s+rt_mod16/);
+    expect(out).toMatch(/^rt_mod16:/m);
+});
+
+test("runtime helpers only emitted when referenced", () => {
+    const out = compile("DECLARE X BYTE; X = X + 1;");
+    expect(out).not.toMatch(/rt_mul8|rt_div8|rt_mod8|rt_mul16|rt_div16|rt_mod16/);
+});
+
+test("multiple uses of same operator share one helper", () => {
+    const out = compile(`
+        DECLARE A BYTE; DECLARE B BYTE; DECLARE C BYTE;
+        C = A * B;
+        C = A * C;
+    `);
+    const labels = out.match(/^rt_mul8:/gm) ?? [];
+    expect(labels).toHaveLength(1);
+});
+
+test("arithmetic program with * / MOD assembles via asm8", () => {
+    const src = `
+        DECLARE A BYTE; DECLARE B BYTE; DECLARE Q BYTE; DECLARE R BYTE; DECLARE P BYTE;
+        A = 23;
+        B = 5;
+        Q = A / B;
+        R = A MOD B;
+        P = Q * B + R;
+    `;
+    const sections = asm(compile(src));
+    expect(sections.length).toBe(1);
+    expect(sections[0]!.data.length).toBeGreaterThan(0);
 });
 
 test("'>' is lowered via operand swap to '<'", () => {

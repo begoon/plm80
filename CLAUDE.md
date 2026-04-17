@@ -47,7 +47,9 @@ Sema enforces register width matches param type; `REGS` without `AT` is a parse 
 
 Expressions: `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `-` and `+`.
 
-**Codegen gaps raising `CodegenError`:** `*` `/` `MOD` (runtime helpers not yet written), string expressions (except as INITIAL values for byte arrays).
+**Codegen gaps raising `CodegenError`:** string expressions (except as INITIAL values for byte arrays).
+
+`*` `/` `MOD` are supported for both BYTE and WORD via runtime helpers in `src/runtime.ts` (`rt_mul8`, `rt_div8`, `rt_mod8`, `rt_mul16`, `rt_div16`, `rt_mod16`). The codegen tracks which helpers are referenced and appends only those to the output, after the user procs and before the data section. Helpers follow the same ABI as user procs: byte ops take A=lhs, B=rhs and return result in A; word ops take HL=lhs, DE=rhs and return result in HL.
 
 **Rejected outright (for v0):** nested procedures, `REENTRANT`, `INTERRUPT`, `LITERALLY`, `BASED`, `STRUCTURE`, `DO CASE`, `DO I = a TO b`, passing a whole array as a value (must use `.NAME` for address-of), multi-register structured returns like monitor's `inpblock`.
 

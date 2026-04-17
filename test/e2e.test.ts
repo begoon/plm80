@@ -62,3 +62,28 @@ test("minimal PUTC program prints three chars via monitor", () => {
     const out = runUnderRk86(bin);
     expect(out).toMatch(/ABC/);
 }, 20_000);
+
+test("byte *, /, MOD helpers compute correct results under rk86", () => {
+    const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
+    const plm = join(dir, "arith.plm");
+    writeFileSync(plm,
+        `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
+         PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
+
+         DECLARE A BYTE; DECLARE B BYTE;
+         DECLARE P BYTE; DECLARE Q BYTE; DECLARE R BYTE;
+
+         A = 23;   /* 17h */
+         B = 5;    /* 05h */
+         P = A * B;       /* 115 = 73h */
+         Q = A / B;       /*   4 = 04h */
+         R = A MOD B;     /*   3 = 03h */
+
+         CALL HEXB(P); CALL PUTC(20H);
+         CALL HEXB(Q); CALL PUTC(20H);
+         CALL HEXB(R);`,
+    );
+    const bin = compileToBin(plm);
+    const out = runUnderRk86(bin);
+    expect(out).toMatch(/73 04 03/);
+}, 20_000);
