@@ -1,4 +1,5 @@
 import { tokenize } from "./lexer.ts";
+import { preprocess } from "./preprocess.ts";
 import { parse, ParseError } from "./parser.ts";
 import { analyze, SemaError } from "./sema.ts";
 import { generate, CodegenError } from "./codegen.ts";
@@ -39,7 +40,7 @@ for (let i = 0; i < argv.length; i++) {
 if (!input) usage();
 
 const source = await Bun.file(input).text();
-const tokens = tokenize(source);
+const tokens = preprocess(tokenize(source));
 
 if (dumpTokens) {
     for (const t of tokens) {

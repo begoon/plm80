@@ -5,12 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generate } from "../src/codegen.ts";
 import { tokenize } from "../src/lexer.ts";
+import { preprocess } from "../src/preprocess.ts";
 import { parse } from "../src/parser.ts";
 import { analyze } from "../src/sema.ts";
 
 function compileToBin(plmPath: string): Uint8Array {
     const src = readFileSync(plmPath, "utf-8");
-    const ast = parse(tokenize(src));
+    const ast = parse(preprocess(tokenize(src)));
     const res = analyze(ast);
     const asmSrc = generate(ast, res, { origin: 0, stack: 0x76CF });
     const sections = asm(asmSrc);

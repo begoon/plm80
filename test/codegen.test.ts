@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test";
 import { tokenize } from "../src/lexer.ts";
+import { preprocess } from "../src/preprocess.ts";
 import { parse } from "../src/parser.ts";
 import { analyze } from "../src/sema.ts";
 import { generate, CodegenError } from "../src/codegen.ts";
 import { asm } from "asm8080";
 
 function compile(src: string): string {
-    const ast = parse(tokenize(src));
+    const ast = parse(preprocess(tokenize(src)));
     const res = analyze(ast);
     return generate(ast, res);
 }
