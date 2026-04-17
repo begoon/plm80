@@ -1,7 +1,7 @@
 node_modules/
 bun.lockb
-bun.lock
 dist/
+build/
 .DS_Store
 *.log
 .bun-cache/
