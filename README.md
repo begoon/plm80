@@ -132,7 +132,7 @@ For the full list of Radio-86RK monitor entries with their register bindings, se
 
 The compiler is a four-stage pipeline. Each stage produces a value you can inspect via a CLI flag:
 
-```
+```text
 source.plm
    │
    ├─ lexer (src/lexer.ts)         -- bun run src/cli.ts --tokens
@@ -176,7 +176,7 @@ Both are pinned as devDependencies via `bun.lock` so CI is reproducible.
 
 ## Project layout
 
-```
+```text
 plm-80/
 ├─ src/
 │  ├─ token.ts      # token kinds + keyword list
