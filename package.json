@@ -13,6 +13,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "asm8080": "^1.0.16",
+    "rk86": "^2.0.15",
     "typescript": "^5.5.0"
   }
 }
