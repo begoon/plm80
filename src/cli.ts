@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+import { readFile, writeFile } from "node:fs/promises";
 import { tokenize } from "./lexer.ts";
 import { preprocess } from "./preprocess.ts";
 import { parse, ParseError } from "./parser.ts";
@@ -5,7 +7,7 @@ import { analyze, SemaError } from "./sema.ts";
 import { generate, CodegenError } from "./codegen.ts";
 
 function usage(): never {
-    console.error("usage: bun run plm <input.plm> [-o <out.asm>] [--tokens] [--ast] [--check] [--org <hex>] [--stack <hex>]");
+    console.error("usage: plm80 <input.plm> [-o <out.asm>] [--tokens] [--ast] [--check] [--org <hex>] [--stack <hex>]");
     process.exit(2);
 }
 
@@ -39,7 +41,7 @@ for (let i = 0; i < argv.length; i++) {
 
 if (!input) usage();
 
-const source = await Bun.file(input).text();
+const source = await readFile(input, "utf8");
 const tokens = preprocess(tokenize(source));
 
 if (dumpTokens) {
@@ -62,7 +64,7 @@ try {
     if (stack !== undefined) cgOpts.stack = stack;
     const asm = generate(ast, res, cgOpts);
     if (!output) output = input.replace(/\.plm$/i, "") + ".asm";
-    await Bun.write(output, asm);
+    await writeFile(output, asm);
     process.exit(0);
 } catch (e) {
     if (e instanceof ParseError || e instanceof SemaError || e instanceof CodegenError) {

@@ -4,17 +4,21 @@ Operational context for future Claude sessions working on this repo. For the pub
 
 ## Shape of the project
 
-- TypeScript + Bun. No framework, no bundler. Entry: `src/cli.ts`.
+- TypeScript + Bun during development. Entry: `src/cli.ts`. Published to npm as `plm80` — `bun run build` bundles to a single Node-compatible `dist/cli.js` (shebanged, exposed as `bin.plm80`).
 - Single-pass tree-walking compiler: source → tokens → AST → resolution side-table → 8080 asm (asm8 dialect).
 - Strict TS: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. Expect to add `!` assertions or conditional spreads rather than loosening tsconfig.
+- `src/cli.ts` uses `node:fs/promises` (not `Bun.file`/`Bun.write`) so the bundle runs under plain Node for npm consumers.
 
 ## Commands
 
 ```bash
-just ci       # bun install --frozen-lockfile, typecheck, full tests
-just demo     # compile + assemble + run examples/demo-rk.plm under rk86
-bun test      # just the test suite
+just ci              # bun install --frozen-lockfile, typecheck, full tests
+just demo            # compile + assemble + run examples/rk-demo.plm under rk86
+just run <NAME>      # same, for any examples/<NAME>.plm
+just publish         # ci + npm version patch + npm publish (prepublishOnly reruns typecheck/test/build)
+bun test             # just the test suite
 bun run typecheck
+bun run build        # produce dist/cli.js (Node bundle with shebang, ~41 KB)
 bun run src/cli.ts examples/foo.plm --org 0 --stack 76CFh -o out.asm
 ```
 
@@ -51,7 +55,7 @@ Expressions: `+ - * / MOD AND OR XOR NOT`, comparisons `= <> < > <= >=`, unary `
 
 `*` `/` `MOD` are supported for both BYTE and WORD via runtime helpers in `src/runtime.ts` (`rt_mul8`, `rt_div8`, `rt_mod8`, `rt_mul16`, `rt_div16`, `rt_mod16`). The codegen tracks which helpers are referenced and appends only those to the output, after the user procs and before the data section. Helpers follow the same ABI as user procs: byte ops take A=lhs, B=rhs and return result in A; word ops take HL=lhs, DE=rhs and return result in HL.
 
-**Rejected outright (for v0):** nested procedures, `REENTRANT`, `INTERRUPT`, `LITERALLY`, `BASED`, `STRUCTURE`, `DO CASE`, `DO I = a TO b`, passing a whole array as a value (must use `.NAME` for address-of), multi-register structured returns like monitor's `inpblock`.
+**Rejected outright (for v0):** nested procedures, `REENTRANT`, `INTERRUPT`, `BASED`, `STRUCTURE`, passing a whole array as a value (must use `.NAME` for address-of), multi-register structured returns like monitor's `inpblock`.
 
 Adding a feature typically touches: lexer (if a new keyword), `ast.ts` (if a new node shape), parser, sema (resolution/typing), codegen (emission), and a test per stage.
 
@@ -76,9 +80,10 @@ Captured in memory (`reference_rk86_emulator`). Key points:
 
 ## Tests
 
-73 tests across 5 files:
+101 tests across 6 files:
 
 - `test/lexer.test.ts` — tokens, radix numbers, strings, comments, compound punct.
+- `test/preprocess.test.ts` — `LITERALLY` token-stream substitution.
 - `test/parser.test.ts` — grammar coverage including error positions.
 - `test/sema.test.ts` — resolution, typing, arity, scope, call-vs-index.
 - `test/codegen.test.ts` — string-match on emitted asm + assembly round-trip via `asm8080`.

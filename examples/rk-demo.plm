@@ -10,7 +10,7 @@
     pushing to the CPU stack.
 
     Build + run:
-        bun run src/cli.ts examples/demo-rk.plm --org 0 --stack 76CFh -o /tmp/demo.asm
+        plm80 examples/rk-demo.plm --org 0 --stack 76CFh -o /tmp/demo.asm
         bunx rk86 --exit-halt /tmp/demo.bin                                           */
 
 PUTS:  PROCEDURE (P)  REGS(HL) AT (0F818H); DECLARE P ADDRESS; END PUTS;

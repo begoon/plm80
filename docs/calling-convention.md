@@ -7,6 +7,7 @@ Internal (plm-80-generated) procedures and external `AT`-bound procedures share 
 For a procedure `FOO: PROCEDURE (A, B, ...) ...;` the compiler allocates one static slot per parameter named `foo_a`, `foo_b`, etc. (name of the procedure in lowercase, underscore, parameter name in lowercase). Each slot is a `ds 1` for `BYTE` or a `ds 2` for `WORD`/`ADDRESS`.
 
 At a call site `CALL FOO(E1, E2, ...)` (or `R = FOO(E1, E2, ...)`), the compiler:
+
 1. Evaluates each argument into `A` (byte) or `HL` (word), in left-to-right order.
 2. Immediately after each argument is evaluated, writes it to its slot via `sta foo_a` or `shld foo_a`.
 3. Emits `call foo` once all slots are populated.

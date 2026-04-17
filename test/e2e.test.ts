@@ -39,8 +39,8 @@ function runUnderRk86(bin: Uint8Array): string {
     return stripDisplay(proc.stdout.toString());
 }
 
-test("demo-rk.plm: banner, sequence, and sum printed by monitor ROM", () => {
-    const bin = compileToBin("examples/demo-rk.plm");
+test("rk-demo.plm: banner, sequence, and sum printed by monitor ROM", () => {
+    const bin = compileToBin("examples/rk-demo.plm");
     expect(bin.length).toBeGreaterThan(0);
     expect(bin.length).toBeLessThan(512);
 

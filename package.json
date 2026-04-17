@@ -1,14 +1,44 @@
 {
-  "name": "plm-80",
-  "version": "0.0.0",
+  "name": "plm80",
+  "version": "0.1.1",
   "description": "PL/M-80 compiler for bare Intel 8080, emitting asm8-compatible assembly",
-  "module": "src/cli.ts",
+  "keywords": [
+    "plm",
+    "plm-80",
+    "pl/m",
+    "8080",
+    "intel-8080",
+    "compiler",
+    "assembly",
+    "retrocomputing",
+    "radio-86rk",
+    "cp/m"
+  ],
+  "author": "Alexander Demin",
+  "license": "MIT",
+  "homepage": "https://github.com/begoon/plm-80",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/begoon/plm-80.git"
+  },
+  "bugs": {
+    "url": "https://github.com/begoon/plm-80/issues"
+  },
   "type": "module",
-  "private": true,
+  "bin": {
+    "plm80": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "plm": "bun run src/cli.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/cli.ts --target=node --outfile=dist/cli.js --minify && chmod +x dist/cli.js",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "devDependencies": {
     "@types/bun": "latest",

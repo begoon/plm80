@@ -44,19 +44,34 @@ These either raise a `CodegenError` with a clear message, or are rejected at par
 
 ## Quick start
 
+### Install from npm
+
+```bash
+npm install -g plm80                   # or: bun add -g plm80
+plm80 foo.plm --org 0 --stack 76CFh -o foo.asm
+```
+
+Or run ad-hoc without installing:
+
+```bash
+npx plm80 foo.plm --org 0 --stack 76CFh -o foo.asm   # or bunx plm80 ...
+```
+
+### Hack on the compiler
+
 Requirements: [Bun](https://bun.sh), [just](https://github.com/casey/just).
 
 ```bash
 git clone <this-repo>
 cd plm-80
 just ci          # installs deps, typechecks, runs full test suite (including rk86 e2e)
-just demo        # compiles examples/demo-rk.plm and runs it under the Radio-86RK emulator
+just demo        # compiles examples/rk-demo.plm and runs it under the Radio-86RK emulator
 ```
 
 ### Compile a single source file
 
 ```bash
-bun run src/cli.ts path/to/foo.plm --org 0 --stack 76CFh -o foo.asm
+plm80 path/to/foo.plm --org 0 --stack 76CFh -o foo.asm
 bunx asm8080 foo.asm -o .              # -> foo.bin, foo.lst, foo.sym, foo.map
 bunx rk86 --exit-halt foo.bin          # run on a Radio-86RK emulator
 ```
@@ -84,9 +99,11 @@ Each program in `examples/` is a complete source you can build and run.
 | --- | --- |
 | [`examples/counter.plm`](examples/counter.plm) | `DO WHILE` loop, byte arithmetic, scalar `DECLARE`s. Assembles to 63 bytes. |
 | [`examples/sum.plm`](examples/sum.plm) | `PROCEDURE` with args + return value, array indexing, recursion-free self-contained proc. |
-| [`examples/bios.plm`](examples/bios.plm) | `AT` on variables and procedures — memory-mapped I/O port, absolute-address array, external ROM call with static-slot ABI. |
 | [`examples/hello-rk.plm`](examples/hello-rk.plm) | Radio-86RK monitor ROM calls via `REGS(...)` + `.` address-of. |
-| [`examples/demo-rk.plm`](examples/demo-rk.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
+| [`examples/rk-literally.plm`](examples/rk-literally.plm) | `LITERALLY` macros for named constants: monitor vectors, loop bound, byte literals. |
+| [`examples/rk-strlen.plm`](examples/rk-strlen.plm) | C-like strlen accepting any string address — uses `BYTE(65535) AT (0)` as a pre-BASED pointer-deref trick. |
+| [`examples/rk-videomem.plm`](examples/rk-videomem.plm) | Direct writes to Radio-86RK video RAM at `76D0h` — fills all 78×30 cells with a rolling byte counter, no monitor calls. |
+| [`examples/rk-demo.plm`](examples/rk-demo.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
 
 Example output from the demo, running under rk86:
 
@@ -134,15 +151,15 @@ The compiler is a four-stage pipeline. Each stage produces a value you can inspe
 ```text
 source.plm
    │
-   ├─ lexer (src/lexer.ts)         -- bun run src/cli.ts --tokens
+   ├─ lexer (src/lexer.ts)         -- plm80 --tokens
    ▼
    tokens
    │
-   ├─ parser (src/parser.ts)       -- bun run src/cli.ts --ast
+   ├─ parser (src/parser.ts)       -- plm80 --ast
    ▼
    AST  (src/ast.ts)
    │
-   ├─ semantic analyzer (src/sema.ts)  -- bun run src/cli.ts --check
+   ├─ semantic analyzer (src/sema.ts)  -- plm80 --check
    ▼
    AST + Resolution side-table
    │
@@ -194,9 +211,11 @@ plm-80/
 ├─ examples/
 │  ├─ counter.plm
 │  ├─ sum.plm
-│  ├─ bios.plm
 │  ├─ hello-rk.plm
-│  └─ demo-rk.plm
+│  ├─ rk-literally.plm
+│  ├─ rk-strlen.plm
+│  ├─ rk-videomem.plm
+│  └─ rk-demo.plm
 ├─ docs/
 │  ├─ plm80-refs.md           # Intel manuals + language notes
 │  ├─ asm8-notes.md           # asm8 syntax + codegen conventions
@@ -213,13 +232,32 @@ plm-80/
 
 ## Roadmap
 
-Rough ordering, highest leverage first:
+Rough ordering, highest leverage first within each group.
 
-1. `REENTRANT` — stack frames, enabling recursion. Requires refactoring every storage-access site in codegen to route through a helper that switches between static-slot and SP-relative addressing. Naive "callee-saves" does not work for genuine recursion.
-2. `INTERRUPT n` procs — register save/restore prologue + `ei / ret`.
-3. Structured returns for BIOS routines like `inpblock` (HL+DE+BC tuple).
-4. `BASED` pointers and `STRUCTURE`.
-5. `DEC` and the remaining `MOV` / `MOVE` / `LENGTH` / `LAST` / `SIZE` / `TIME` built-ins.
+### Language features
+
+1. **`REENTRANT` — stack frames, recursion.** Requires refactoring every storage-access site in codegen to route through a helper that switches between static-slot and SP-relative addressing. Naive "callee-saves" does not work for genuine recursion. Unblocks every program that recurses or needs re-entrant ISRs.
+2. **`INTERRUPT n` procs.** Register save/restore prologue plus `ei / ret`. Prerequisite for driving timer and keyboard ISRs on real hardware.
+3. **`BASED` pointers.** Indirect addressing through a variable — unlocks linked lists, ring buffers, and anything that needs heap-like references.
+4. **`STRUCTURE`.** Named aggregates with field offsets. Mostly layout arithmetic plus a field-resolution pass in sema, once `BASED` is in.
+5. **Nested procedures.** Shares frame-management machinery with `REENTRANT`; cheaper to land after that.
+6. **Structured returns.** Specifically the `HL + DE + BC` tuple returned by monitor routines like `inpblock`. Needs an AST-level multi-value notion and destructuring assignment.
+7. **Whole-array arguments.** PL/M-80 allows passing an array by name (not just `.NAME`) and having the callee index into it. Covers a large fraction of idiomatic monitor-ROM usage.
+8. **String expressions.** Currently refused outside `INITIAL`. Expose them as `(address, length)` so they flow through expression codegen and into `CALL` arguments.
+9. **Remaining built-ins.** `DEC`, `MOV`, `MOVE`, `LENGTH`, `LAST`, `SIZE`, `TIME` — each a small runtime helper once the above is in place.
+10. **Multi-module builds.** `PUBLIC` / `EXTERNAL` declarations with per-file compilation and a single `asm8080` invocation at link time.
+
+### Tooling and quality
+
+1. **Peephole optimizer.** Coalesce `mvi a,X / mov r,a` into `mvi r,X`, drop redundant `mov r,r`, fuse adjacent pointer increments, fold `lxi h,0 / dad d` patterns. The monitor ROM is only 2 KB and every byte on an 8080 system competes for space.
+2. **Listing output.** Interleaved PL/M source + emitted assembly with addresses, matching Intel's original PLM-80 listing format. Makes it easy to audit codegen quality by eye.
+3. **Editor integration.** `--check` already emits positioned errors. Wrapping it in a minimal LSP (diagnostics only) gives inline squigglies in VS Code and Zed for free.
+4. **Richer diagnostics.** "Did you mean…" for mistyped identifiers, caret-under-token source rendering, typed `expected X, got Y` mismatches.
+
+### Examples and reach
+
+1. **CP/M BDOS demo.** Smallest useful `.com` program using BDOS call 9 — same `REGS(C)` shape as the existing RK monitor bindings, on a different target.
+2. **Larger end-to-end example.** A small REPL or tape-loader utility that exercises the whole v0 subset and forces the next round of missing features to surface.
 
 ---
 
