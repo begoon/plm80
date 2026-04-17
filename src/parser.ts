@@ -1,6 +1,6 @@
 import type { Keyword, Pos, Token } from "./token.ts";
 import type {
-    BinOp, Decl, Expr, Item, LValue, PlmType, Proc, Program, Stmt,
+    BinOp, Decl, Expr, IterStmt, Item, LValue, PlmType, Proc, Program, Stmt,
 } from "./ast.ts";
 
 export class ParseError extends Error {
@@ -285,21 +285,54 @@ class Parser {
 
     private doStmt(): Stmt {
         const kw = this.eatKw("DO");
-        let whileCond: Expr | undefined;
         if (this.isKw("WHILE")) {
             this.eatKw("WHILE");
-            whileCond = this.expression();
+            const cond = this.expression();
+            this.eatPunct(";");
+            const body = this.doBody(kw.pos);
+            return { kind: "while", cond, body, pos: kw.pos };
+        }
+        if (this.isKw("CASE")) {
+            this.eatKw("CASE");
+            const selector = this.expression();
+            this.eatPunct(";");
+            const cases: Stmt[] = [];
+            while (!this.isKw("END")) {
+                if (this.eof()) throw new ParseError(`unterminated DO CASE`, kw.pos);
+                cases.push(this.statement());
+            }
+            this.eatKw("END");
+            this.eatPunct(";");
+            return { kind: "case", selector, cases, pos: kw.pos };
+        }
+        if (this.peek().kind === "ident" && this.isPunct("=", 1)) {
+            const varTok = this.eatIdent();
+            this.eatPunct("=");
+            const from = this.expression();
+            this.eatKw("TO");
+            const to = this.expression();
+            let step: Expr | undefined;
+            if (this.isKw("BY")) { this.eatKw("BY"); step = this.expression(); }
+            this.eatPunct(";");
+            const body = this.doBody(kw.pos);
+            const s: IterStmt = { kind: "iter", var: varTok.text, from, to, body, pos: kw.pos };
+            if (step) s.step = step;
+            return s;
         }
         this.eatPunct(";");
+        const body = this.doBody(kw.pos);
+        return { kind: "do", body, pos: kw.pos };
+    }
+
+    private doBody(startPos: Pos): Item[] {
         const body: Item[] = [];
         while (!this.isKw("END")) {
-            if (this.eof()) throw new ParseError(`unterminated DO`, kw.pos);
+            if (this.eof()) throw new ParseError(`unterminated DO`, startPos);
             this.collectItem(body);
         }
         this.eatKw("END");
         this.eatPunct(";");
-        if (whileCond) return { kind: "while", cond: whileCond, body, pos: kw.pos };
-        return { kind: "do", body, pos: kw.pos };
+        return body;
     }
 
     private callStmt(): Stmt {

@@ -63,6 +63,46 @@ test("minimal PUTC program prints three chars via monitor", () => {
     expect(out).toMatch(/ABC/);
 }, 20_000);
 
+test("DO I = 1 TO 5 loop runs 5 times under rk86", () => {
+    const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
+    const plm = join(dir, "iter.plm");
+    writeFileSync(plm,
+        `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
+         PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
+
+         DECLARE I BYTE;
+         DO I = 1 TO 5;
+             CALL HEXB(I);
+             CALL PUTC(20H);
+         END;`,
+    );
+    const bin = compileToBin(plm);
+    const out = runUnderRk86(bin);
+    expect(out).toMatch(/01 02 03 04 05/);
+}, 20_000);
+
+test("DO CASE dispatches to the selected branch under rk86", () => {
+    const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
+    const plm = join(dir, "case.plm");
+    writeFileSync(plm,
+        `PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
+
+         DECLARE N BYTE;
+         N = 2;
+         DO CASE N;
+             CALL PUTC(41H);   /* 'A' for case 0 */
+             CALL PUTC(42H);   /* 'B' for case 1 */
+             CALL PUTC(43H);   /* 'C' for case 2 */
+             CALL PUTC(44H);   /* 'D' for case 3 */
+         END;`,
+    );
+    const bin = compileToBin(plm);
+    const out = runUnderRk86(bin);
+    expect(out).toMatch(/C/);
+    // Make sure the other cases didn't run:
+    expect(out).not.toMatch(/ABCD/);
+}, 20_000);
+
 test("byte *, /, MOD helpers compute correct results under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "arith.plm");

@@ -207,6 +207,29 @@ class Analyzer {
                     this.walkStmt(it, scope, enclosingProc);
                 }
                 return;
+            case "iter": {
+                const sym = scope.lookup(s.var);
+                if (!sym) throw new SemaError(`undefined loop variable '${s.var}'`, s.pos);
+                if (sym.kind !== "var" && sym.kind !== "param") {
+                    throw new SemaError(`'${s.var}' is not assignable`, s.pos);
+                }
+                if (sym.decl.type.kind === "array") {
+                    throw new SemaError(`loop variable '${s.var}' must be scalar`, s.pos);
+                }
+                this.typeExpr(s.from, scope);
+                this.typeExpr(s.to, scope);
+                if (s.step) this.typeExpr(s.step, scope);
+                for (const it of s.body) {
+                    if (it.kind === "decl") continue;
+                    if (it.kind === "proc") throw new SemaError("nested procedures not supported in v0", it.pos);
+                    this.walkStmt(it, scope, enclosingProc);
+                }
+                return;
+            }
+            case "case":
+                this.typeExpr(s.selector, scope);
+                for (const c of s.cases) this.walkStmt(c, scope, enclosingProc);
+                return;
             case "call": {
                 const sym = scope.lookup(s.name);
                 if (!sym) throw new SemaError(`undefined procedure '${s.name}'`, s.pos);

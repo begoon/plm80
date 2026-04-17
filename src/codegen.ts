@@ -190,6 +190,8 @@ class Codegen {
                 this.emitStmt(it);
             } return;
             case "while": this.emitWhile(s); return;
+            case "iter": this.emitIter(s); return;
+            case "case": this.emitCase(s); return;
             case "call": this.emitCall(s.name, s.args, s.pos, false); return;
             case "return":
                 if (s.value) this.evalExpr(s.value, this.procReturnType());
@@ -278,6 +280,94 @@ class Codegen {
             this.emitStmt(s.else);
         }
         this.line(`${endLabel}:`);
+    }
+
+    private emitIter(s: import("./ast.ts").IterStmt): void {
+        const varSym = this.currentScope().lookup(s.var);
+        if (!varSym || (varSym.kind !== "var" && varSym.kind !== "param")) {
+            throw new CodegenError(`loop variable '${s.var}' not assignable`, s.pos);
+        }
+        if (varSym.decl.type.kind === "array") {
+            throw new CodegenError(`loop variable '${s.var}' must be scalar`, s.pos);
+        }
+        const width: "byte" | "word" = varSym.decl.type.kind === "byte" ? "byte" : "word";
+        const label = symLabel(varSym);
+
+        this.evalExpr(s.from, width);
+        if (width === "byte") this.line(`    sta  ${label}`);
+        else this.line(`    shld ${label}`);
+
+        const head = this.fresh("iter");
+        const body = this.fresh("iterbody");
+        const end = this.fresh("iterend");
+
+        this.line(`${head}:`);
+        this.evalExpr(s.to, width);
+        if (width === "byte") {
+            this.line(`    mov  b, a`);
+            this.line(`    lda  ${label}`);
+            this.line(`    cmp  b`);
+            this.line(`    jc   ${body}`);
+            this.line(`    jz   ${body}`);
+            this.line(`    jmp  ${end}`);
+        } else {
+            this.line(`    xchg`);
+            this.line(`    lhld ${label}`);
+            this.line(`    mov  a, l`);
+            this.line(`    sub  e`);
+            this.line(`    mov  c, a`);
+            this.line(`    mov  a, h`);
+            this.line(`    sbb  d`);
+            this.line(`    jc   ${body}`);
+            this.line(`    ora  c`);
+            this.line(`    jz   ${body}`);
+            this.line(`    jmp  ${end}`);
+        }
+        this.line(`${body}:`);
+        for (const it of s.body) {
+            if (it.kind === "decl" || it.kind === "proc") continue;
+            this.emitStmt(it);
+        }
+        if (s.step) this.evalExpr(s.step, width);
+        else if (width === "byte") this.line(`    mvi  a, 01h`);
+        else this.line(`    lxi  h, 0001h`);
+        if (width === "byte") {
+            this.line(`    mov  b, a`);
+            this.line(`    lda  ${label}`);
+            this.line(`    add  b`);
+            this.line(`    sta  ${label}`);
+        } else {
+            this.line(`    xchg`);
+            this.line(`    lhld ${label}`);
+            this.line(`    dad  d`);
+            this.line(`    shld ${label}`);
+        }
+        this.line(`    jmp  ${head}`);
+        this.line(`${end}:`);
+    }
+
+    private emitCase(s: import("./ast.ts").CaseStmt): void {
+        const end = this.fresh("caseend");
+        const table = this.fresh("casetab");
+        const labels = s.cases.map((_, i) => `${table}_${i}`);
+        // compute target via table[selector]
+        this.evalExpr(s.selector, "word");
+        this.line(`    dad  h`);           // HL *= 2
+        this.line(`    lxi  d, ${table}`);
+        this.line(`    dad  d`);
+        this.line(`    mov  a, m`);
+        this.line(`    inx  h`);
+        this.line(`    mov  h, m`);
+        this.line(`    mov  l, a`);
+        this.line(`    pchl`);             // jump to (HL)
+        for (let i = 0; i < s.cases.length; i++) {
+            this.line(`${labels[i]}:`);
+            this.emitStmt(s.cases[i]!);
+            this.line(`    jmp  ${end}`);
+        }
+        this.line(`${table}:`);
+        this.line(`    dw ${labels.join(", ")}`);
+        this.line(`${end}:`);
     }
 
     private emitWhile(s: import("./ast.ts").WhileStmt): void {

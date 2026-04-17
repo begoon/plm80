@@ -38,6 +38,8 @@ export type Stmt =
     | IfStmt
     | DoStmt
     | WhileStmt
+    | IterStmt
+    | CaseStmt
     | CallStmt
     | ReturnStmt
     | GotoStmt
@@ -48,6 +50,16 @@ export type AssignStmt = { kind: "assign"; targets: LValue[]; value: Expr; pos: 
 export type IfStmt = { kind: "if"; cond: Expr; then: Stmt; else?: Stmt; pos: Pos };
 export type DoStmt = { kind: "do"; body: Item[]; pos: Pos };
 export type WhileStmt = { kind: "while"; cond: Expr; body: Item[]; pos: Pos };
+export type IterStmt = {
+    kind: "iter";
+    var: string;
+    from: Expr;
+    to: Expr;
+    step?: Expr;
+    body: Item[];
+    pos: Pos;
+};
+export type CaseStmt = { kind: "case"; selector: Expr; cases: Stmt[]; pos: Pos };
 export type CallStmt = { kind: "call"; name: string; args: Expr[]; pos: Pos };
 export type ReturnStmt = { kind: "return"; value?: Expr; pos: Pos };
 export type GotoStmt = { kind: "goto"; label: string; pos: Pos };

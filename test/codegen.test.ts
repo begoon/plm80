@@ -153,6 +153,49 @@ test("multiple uses of same operator share one helper", () => {
     expect(labels).toHaveLength(1);
 });
 
+test("DO I = a TO b emits init, head, body, step, loop", () => {
+    const out = compile(`
+        DECLARE I BYTE; DECLARE S BYTE;
+        S = 0;
+        DO I = 1 TO 5;
+            S = S + I;
+        END;
+    `);
+    expect(out).toMatch(/^L\d+_iter:/m);
+    expect(out).toMatch(/^L\d+_iterbody:/m);
+    expect(out).toMatch(/^L\d+_iterend:/m);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
+test("DO I = a TO b BY step honors the user's step", () => {
+    const out = compile(`
+        DECLARE I BYTE;
+        DO I = 0 TO 20 BY 5;
+            I = I;
+        END;
+    `);
+    expect(out).toMatch(/mvi\s+a,\s+05h/);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
+test("DO CASE builds jump table and per-case bodies", () => {
+    const out = compile(`
+        DECLARE N BYTE; DECLARE X BYTE;
+        DO CASE N;
+            X = 10;
+            X = 20;
+            X = 30;
+        END;
+    `);
+    expect(out).toMatch(/pchl/);
+    expect(out).toMatch(/^L\d+_casetab:/m);
+    expect(out).toMatch(/dw\s+L\d+_casetab_0,\s+L\d+_casetab_1,\s+L\d+_casetab_2/);
+    const sections = asm(out);
+    expect(sections.length).toBe(1);
+});
+
 test("arithmetic program with * / MOD assembles via asm8", () => {
     const src = `
         DECLARE A BYTE; DECLARE B BYTE; DECLARE Q BYTE; DECLARE R BYTE; DECLARE P BYTE;
