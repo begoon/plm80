@@ -38,6 +38,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "bun build src/cli.ts --target=node --outfile=dist/cli.js --minify && chmod +x dist/cli.js",
+    "build:playground": "printf 'export const BUILD_TIME = \"%s\";\\n' \"$(date '+%Y-%m-%d %H:%M:%S')\" > docs/build-info.ts && bun build docs/playground.ts --target=browser --format=esm --outfile=docs/playground.js",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "devDependencies": {
