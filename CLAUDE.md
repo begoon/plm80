@@ -13,13 +13,15 @@ Operational context for future Claude sessions working on this repo. For the pub
 
 ```bash
 just ci              # bun install --frozen-lockfile, typecheck, full tests
-just demo            # compile + assemble + run examples/rk-demo.plm under rk86
-just run <NAME>      # same, for any examples/<NAME>.plm
+just demo            # compile + assemble + run docs/examples/rk-demo.plm under rk86
+just run <NAME>      # same, for any docs/examples/<NAME>.plm
 just publish         # ci + npm version patch + npm publish (prepublishOnly reruns typecheck/test/build)
+just build-playground  # bundle the browser playground in docs/
+just serve-playground  # build + serve the playground on :8733
 bun test             # just the test suite
 bun run typecheck
 bun run build        # produce dist/cli.js (Node bundle with shebang, ~41 KB)
-bun run src/cli.ts examples/foo.plm --org 0 --stack 76CFh -o out.asm
+bun run src/cli.ts docs/examples/foo.plm --org 0 --stack 76CFh -o out.asm
 ```
 
 `rk86` and `asm8080` are both devDeps. CI runs on Ubuntu via `.github/workflows/ci.yml`.
@@ -38,7 +40,7 @@ bun run src/cli.ts examples/foo.plm --org 0 --stack 76CFh -o out.asm
 
 ## ABI (static-slot + REGS)
 
-Two conventions live side by side. Details are in `docs/calling-convention.md`.
+Two conventions live side by side. Details are in `info/calling-convention.md`.
 
 - **Default (internal + plain `AT`)**: arguments written to static slots named `<proc>_<param>` (lowercased), result in `A` (byte) or `HL` (word/address), all registers clobbered by callee. Safe because expression codegen always spills live intermediates via `push psw`/`push h` before emitting another `call`.
 - **`REGS(...)`** attribute on `AT` procedures: each param is moved into a named register (`A B C D E H L` for byte, `HL DE BC` for word/address) instead of a static slot. Return convention unchanged.
@@ -61,7 +63,7 @@ Adding a feature typically touches: lexer (if a new keyword), `ast.ts` (if a new
 
 ## asm8 output conventions
 
-See `docs/asm8-notes.md` for the full syntax reference. Conventions to maintain:
+See `info/asm8-notes.md` for the full syntax reference. Conventions to maintain:
 
 - Lowercase mnemonics and symbols (matches `target/monitor.asm` style in asm8's repo).
 - 4-space indent for instructions; labels at column 0 with trailing colon.

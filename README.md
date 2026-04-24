@@ -8,7 +8,7 @@ A compiler for a useful subset of **PL/M-80** targeting the bare **Intel 8080**.
 
 PL/M-80 is the systems language Intel published in 1973 for the 8080. It was used for CP/M, ISIS-II, and most early Intel firmware. It is block-structured, statically typed (`BYTE`, `WORD`, `ADDRESS`), and maps closely onto the 8080 architecture. This project implements a working compiler for the useful core of that language — enough to write practical bare-metal programs for the 8080, including code that calls into a ROM monitor via its jump table.
 
-See [`docs/plm80-refs.md`](docs/plm80-refs.md) for the Intel manuals we follow (bitsavers order numbers 9800268 and 9800300).
+See [`info/plm80-refs.md`](info/plm80-refs.md) for the Intel manuals we follow (bitsavers order numbers 9800268 and 9800300).
 
 ---
 
@@ -65,7 +65,7 @@ Requirements: [Bun](https://bun.sh), [just](https://github.com/casey/just).
 git clone <this-repo>
 cd plm-80
 just ci          # installs deps, typechecks, runs full test suite (including rk86 e2e)
-just demo        # compiles examples/rk-demo.plm and runs it under the Radio-86RK emulator
+just demo        # compiles docs/examples/rk-demo.plm and runs it under the Radio-86RK emulator
 ```
 
 ### Compile a single source file
@@ -87,23 +87,23 @@ bunx rk86 --exit-halt foo.bin          # run on a Radio-86RK emulator
 | `--ast` | Dump the AST as JSON and exit. |
 | `--check` | Parse + analyze only; exit 0 if clean, non-zero on error. Useful for editor linting. |
 
-Errors look like `examples/foo.plm:12:3: undefined identifier 'BAR'` — file path, line, column, message.
+Errors look like `docs/examples/foo.plm:12:3: undefined identifier 'BAR'` — file path, line, column, message.
 
 ---
 
 ## Examples
 
-Each program in `examples/` is a complete source you can build and run.
+Each program in `docs/examples/` is a complete source you can build and run, and every one of them is also available in the [browser playground](#playground).
 
 | File | Demonstrates |
 | --- | --- |
-| [`examples/counter.plm`](examples/counter.plm) | `DO WHILE` loop, byte arithmetic, scalar `DECLARE`s. Assembles to 63 bytes. |
-| [`examples/sum.plm`](examples/sum.plm) | `PROCEDURE` with args + return value, array indexing, recursion-free self-contained proc. |
-| [`examples/hello-rk.plm`](examples/hello-rk.plm) | Radio-86RK monitor ROM calls via `REGS(...)` + `.` address-of. |
-| [`examples/rk-literally.plm`](examples/rk-literally.plm) | `LITERALLY` macros for named constants: monitor vectors, loop bound, byte literals. |
-| [`examples/rk-strlen.plm`](examples/rk-strlen.plm) | C-like strlen accepting any string address — uses `BYTE(65535) AT (0)` as a pre-BASED pointer-deref trick. |
-| [`examples/rk-videomem.plm`](examples/rk-videomem.plm) | Direct writes to Radio-86RK video RAM at `76D0h` — fills all 78×30 cells with a rolling byte counter, no monitor calls. |
-| [`examples/rk-demo.plm`](examples/rk-demo.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
+| [`docs/examples/counter.plm`](docs/examples/counter.plm) | `DO WHILE` loop, byte arithmetic, scalar `DECLARE`s. Assembles to 63 bytes. |
+| [`docs/examples/sum.plm`](docs/examples/sum.plm) | `PROCEDURE` with args + return value, array indexing, recursion-free self-contained proc. |
+| [`docs/examples/hello-rk.plm`](docs/examples/hello-rk.plm) | Radio-86RK monitor ROM calls via `REGS(...)` + `.` address-of. |
+| [`docs/examples/rk-literally.plm`](docs/examples/rk-literally.plm) | `LITERALLY` macros for named constants: monitor vectors, loop bound, byte literals. |
+| [`docs/examples/rk-strlen.plm`](docs/examples/rk-strlen.plm) | C-like strlen accepting any string address — uses `BYTE(65535) AT (0)` as a pre-BASED pointer-deref trick. |
+| [`docs/examples/rk-videomem.plm`](docs/examples/rk-videomem.plm) | Direct writes to Radio-86RK video RAM at `76D0h` — fills all 78×30 cells with a rolling byte counter, no monitor calls. |
+| [`docs/examples/rk-demo.plm`](docs/examples/rk-demo.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
 
 Example output from the demo, running under rk86:
 
@@ -115,9 +115,21 @@ SUM (0..10) = 37
 
 ---
 
+## Playground
+
+An in-browser playground lives in [`docs/`](docs/). Sources at the top, generated asm in the middle, assembled bytes at the bottom — all recompiled on every keystroke. Both the PL/M compiler and the [asm8080](https://github.com/begoon/asm8) assembler are bundled into a single `playground.js`, so there is no server and no round-trip. Tabs, the example dropdown, and state are modelled on [asm8's playground](https://github.com/begoon/asm8/tree/main/docs); the three-pane layout is modelled on [c8080-js](https://github.com/alexey-f-morozov/c8080).
+
+```bash
+just serve-playground    # bundles docs/playground.js, serves docs/ on :8733
+```
+
+`docs/examples.js` is the manifest shown in the `Example` dropdown — each entry's source text is fetched from `docs/examples/` on demand. `docs/conf.js` holds per-deployment overrides (for example, pointing `Run` at a same-origin emulator).
+
+---
+
 ## Calling conventions
 
-Two ABIs live side by side. Full details in [`docs/calling-convention.md`](docs/calling-convention.md).
+Two ABIs live side by side. Full details in [`info/calling-convention.md`](info/calling-convention.md).
 
 ### 1. Static-slot (internal procedures and plain `AT` externals)
 
@@ -140,7 +152,7 @@ CALL PUTS(.MSG);      /* lxi h,msg;           call puts */
 
 Byte params can be assigned to `A B C D E H L`; word/address params to `HL DE BC`. The compiler validates that register widths match parameter types. Return convention (result in `A` or `HL`) is unchanged.
 
-For the full list of Radio-86RK monitor entries with their register bindings, see [`docs/radio86rk-bios.md`](docs/radio86rk-bios.md).
+For the full list of Radio-86RK monitor entries with their register bindings, see [`info/radio86rk-bios.md`](info/radio86rk-bios.md).
 
 ---
 
@@ -183,7 +195,7 @@ Design choices worth calling out:
 
 ## Target platforms
 
-- **Assembler: [asm8](https://github.com/begoon/asm8)** (npm: `asm8080`). Two-pass 8080 assembler in TypeScript. Full instruction set, sensible expression language with `LOW(x)` / `HIGH(x)` functions. See [`docs/asm8-notes.md`](docs/asm8-notes.md) for the syntax details we target.
+- **Assembler: [asm8](https://github.com/begoon/asm8)** (npm: `asm8080`). Two-pass 8080 assembler in TypeScript. Full instruction set, sensible expression language with `LOW(x)` / `HIGH(x)` functions. See [`info/asm8-notes.md`](info/asm8-notes.md) for the syntax details we target.
 - **Emulator: [rk86](https://github.com/begoon/rk86)** (npm: `rk86`). Terminal-mode Radio-86RK (Intel 8080) emulator. Boots the monitor ROM from F800 for 500 ms on startup — which initializes CRTC, DMA, and the monitor work area — then jumps to the user program at its entry. Our programs therefore only need to set `SP` themselves; all hardware and monitor state is already live by the time user code runs. Exit cleanly on `HLT` with `--exit-halt`.
 
 Both are pinned as devDependencies via `bun.lock` so CI is reproducible.
@@ -208,15 +220,20 @@ plm-80/
 │  ├─ sema.test.ts
 │  ├─ codegen.test.ts
 │  └─ e2e.test.ts   # compile + assemble + run under rk86
-├─ examples/
-│  ├─ counter.plm
-│  ├─ sum.plm
-│  ├─ hello-rk.plm
-│  ├─ rk-literally.plm
-│  ├─ rk-strlen.plm
-│  ├─ rk-videomem.plm
-│  └─ rk-demo.plm
-├─ docs/
+├─ docs/                      # browser playground + sources it ships
+│  ├─ index.html
+│  ├─ playground.ts           # compile → asm → assemble in-browser
+│  ├─ conf.js                 # optional local overrides (emulator URL etc.)
+│  ├─ examples.js             # manifest of example programs
+│  └─ examples/
+│     ├─ counter.plm
+│     ├─ sum.plm
+│     ├─ hello-rk.plm
+│     ├─ rk-literally.plm
+│     ├─ rk-strlen.plm
+│     ├─ rk-videomem.plm
+│     └─ rk-demo.plm
+├─ info/                      # long-form reference (rendered on GitHub)
 │  ├─ plm80-refs.md           # Intel manuals + language notes
 │  ├─ asm8-notes.md           # asm8 syntax + codegen conventions
 │  ├─ calling-convention.md   # ABI: static slots + REGS
