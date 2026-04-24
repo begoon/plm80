@@ -117,7 +117,7 @@ SUM (0..10) = 37
 
 ## Playground
 
-An in-browser playground lives in [`docs/`](docs/). Sources at the top, generated asm in the middle, assembled bytes at the bottom — all recompiled on every keystroke. Both the PL/M compiler and the [asm8080](https://github.com/begoon/asm8) assembler are bundled into a single `playground.js`, so there is no server and no round-trip. Tabs, the example dropdown, and state are modelled on [asm8's playground](https://github.com/begoon/asm8/tree/main/docs); the three-pane layout is modelled on [c8080-js](https://github.com/alexey-f-morozov/c8080).
+An in-browser playground lives in [`docs/`](docs/). Source on the left, generated asm and assembled bytes stacked on the right — all recompiled on every keystroke. Both the PL/M compiler and the [asm8080](https://github.com/begoon/asm8) assembler are bundled into a single `playground.js`, so there is no server and no round-trip. Tabs, the example dropdown, and state are modelled on [asm8's playground](https://github.com/begoon/asm8/tree/main/docs); the source/asm/bytes split is modelled on [c8080-js](https://github.com/alexey-f-morozov/c8080).
 
 ```bash
 just serve-playground    # bundles docs/playground.js, serves docs/ on :8733

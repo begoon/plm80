@@ -74,7 +74,6 @@ type Theme = "dark" | "light";
 
 function applyTheme(t: Theme) {
     document.body.classList.toggle("theme-light", t === "light");
-    themeBtn.textContent = t === "light" ? "dark" : "light";
 }
 
 function loadTheme(): Theme {

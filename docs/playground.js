@@ -3287,7 +3287,7 @@ function compile(source, opts = {}) {
 }
 
 // docs/build-info.ts
-var BUILD_TIME = "2026-04-24 09:06:07";
+var BUILD_TIME = "2026-04-24 09:31:32";
 
 // docs/playground.ts
 var fetchExample = (f) => fetch(`examples/${f}`).then((r) => r.text());
@@ -3322,7 +3322,6 @@ var tabs = [];
 var active = 0;
 function applyTheme(t) {
   document.body.classList.toggle("theme-light", t === "light");
-  themeBtn.textContent = t === "light" ? "dark" : "light";
 }
 function loadTheme() {
   try {
