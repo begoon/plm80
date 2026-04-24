@@ -6,10 +6,10 @@ ci:
     bun run typecheck
     bun test
 
-# Compile docs/examples/rk-demo.plm and run it under the rk86 emulator
+# Compile docs/examples/greeting.plm and run it under the rk86 emulator
 demo:
     mkdir -p build
-    bun run src/cli.ts docs/examples/rk-demo.plm --org 0 --stack 76CFh -o build/demo.asm
+    bun run src/cli.ts docs/examples/greeting.plm --org 0 --stack 76CFh -o build/demo.asm
     bunx asm8080 build/demo.asm -o build
     bunx rk86 --exit-halt build/demo.bin
 

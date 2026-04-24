@@ -65,7 +65,7 @@ Requirements: [Bun](https://bun.sh), [just](https://github.com/casey/just).
 git clone <this-repo>
 cd plm-80
 just ci          # installs deps, typechecks, runs full test suite (including rk86 e2e)
-just demo        # compiles docs/examples/rk-demo.plm and runs it under the Radio-86RK emulator
+just demo        # compiles docs/examples/greeting.plm and runs it under the Radio-86RK emulator
 ```
 
 ### Compile a single source file
@@ -99,11 +99,11 @@ Each program in `docs/examples/` is a complete source you can build and run, and
 | --- | --- |
 | [`docs/examples/counter.plm`](docs/examples/counter.plm) | `DO WHILE` loop, byte arithmetic, scalar `DECLARE`s. Assembles to 63 bytes. |
 | [`docs/examples/sum.plm`](docs/examples/sum.plm) | `PROCEDURE` with args + return value, array indexing, recursion-free self-contained proc. |
-| [`docs/examples/hello-rk.plm`](docs/examples/hello-rk.plm) | Radio-86RK monitor ROM calls via `REGS(...)` + `.` address-of. |
-| [`docs/examples/rk-literally.plm`](docs/examples/rk-literally.plm) | `LITERALLY` macros for named constants: monitor vectors, loop bound, byte literals. |
-| [`docs/examples/rk-strlen.plm`](docs/examples/rk-strlen.plm) | C-like strlen accepting any string address — uses `BYTE(65535) AT (0)` as a pre-BASED pointer-deref trick. |
-| [`docs/examples/rk-videomem.plm`](docs/examples/rk-videomem.plm) | Direct writes to Radio-86RK video RAM at `76D0h` — fills all 78×30 cells with a rolling byte counter, no monitor calls. |
-| [`docs/examples/rk-demo.plm`](docs/examples/rk-demo.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
+| [`docs/examples/hello.plm`](docs/examples/hello.plm) | Radio-86RK monitor ROM calls via `REGS(...)` + `.` address-of. |
+| [`docs/examples/literally.plm`](docs/examples/literally.plm) | `LITERALLY` macros for named constants: monitor vectors, loop bound, byte literals. |
+| [`docs/examples/strlen.plm`](docs/examples/strlen.plm) | C-like strlen accepting any string address — uses `BYTE(65535) AT (0)` as a pre-BASED pointer-deref trick. |
+| [`docs/examples/videomem.plm`](docs/examples/videomem.plm) | Direct writes to Radio-86RK video RAM at `76D0h` — fills all 78×30 cells with a rolling byte counter, no monitor calls. |
+| [`docs/examples/greeting.plm`](docs/examples/greeting.plm) | End-to-end demo: banner, number sequence, sum, halt — all via monitor routines. |
 
 Example output from the demo, running under rk86:
 
@@ -228,11 +228,11 @@ plm-80/
 │  └─ examples/
 │     ├─ counter.plm
 │     ├─ sum.plm
-│     ├─ hello-rk.plm
-│     ├─ rk-literally.plm
-│     ├─ rk-strlen.plm
-│     ├─ rk-videomem.plm
-│     └─ rk-demo.plm
+│     ├─ hello.plm
+│     ├─ literally.plm
+│     ├─ strlen.plm
+│     ├─ videomem.plm
+│     └─ greeting.plm
 ├─ info/                      # long-form reference (rendered on GitHub)
 │  ├─ plm80-refs.md           # Intel manuals + language notes
 │  ├─ asm8-notes.md           # asm8 syntax + codegen conventions

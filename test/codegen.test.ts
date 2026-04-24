@@ -1,10 +1,10 @@
-import { expect, test } from "bun:test";
-import { tokenize } from "../src/lexer.ts";
-import { preprocess } from "../src/preprocess.ts";
-import { parse } from "../src/parser.ts";
-import { analyze } from "../src/sema.ts";
-import { generate, CodegenError } from "../src/codegen.ts";
 import { asm } from "asm8080";
+import { expect, test } from "bun:test";
+import { CodegenError, generate } from "../src/codegen.ts";
+import { tokenize } from "../src/lexer.ts";
+import { parse } from "../src/parser.ts";
+import { preprocess } from "../src/preprocess.ts";
+import { analyze } from "../src/sema.ts";
 
 function compile(src: string): string {
     const ast = parse(preprocess(tokenize(src)));
@@ -295,11 +295,13 @@ test("AT procedure emits equ and no body", () => {
 });
 
 test("AT procedure with body statements is rejected at parse time", () => {
-    expect(() => compile(`
+    expect(() =>
+        compile(`
         FOO: PROCEDURE AT (0F000H);
             RETURN;
         END FOO;
-    `)).toThrow();
+    `),
+    ).toThrow();
 });
 
 test("AT variable cannot also have INITIAL", () => {
@@ -345,19 +347,23 @@ test("REGS(DE) swaps HL to DE via xchg", () => {
 });
 
 test("REGS with wrong register width is rejected", () => {
-    expect(() => compile(`
+    expect(() =>
+        compile(`
         FOO: PROCEDURE (P) REGS(C) AT (0F000H);
             DECLARE P ADDRESS;
         END FOO;
-    `)).toThrow();
+    `),
+    ).toThrow();
 });
 
 test("REGS without AT is rejected", () => {
-    expect(() => compile(`
+    expect(() =>
+        compile(`
         FOO: PROCEDURE (X) REGS(A);
             DECLARE X BYTE;
         END FOO;
-    `)).toThrow();
+    `),
+    ).toThrow();
 });
 
 test("address-of a global returns its label in HL", () => {
@@ -366,7 +372,7 @@ test("address-of a global returns its label in HL", () => {
     expect(out).toMatch(/shld\s+p/);
 });
 
-test("hello-rk.plm assembles via asm8", () => {
+test("hello.plm assembles via asm8", () => {
     const src = `
         PUTS: PROCEDURE (P) REGS(HL) AT (0F818H);
             DECLARE P ADDRESS;

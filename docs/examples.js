@@ -6,9 +6,9 @@
 window.plm80Examples = [
     { name: "counter", filename: "counter.plm" },
     { name: "sum", filename: "sum.plm" },
-    { name: "hello-rk", filename: "hello-rk.plm" },
-    { name: "rk-literally", filename: "rk-literally.plm" },
-    { name: "rk-strlen", filename: "rk-strlen.plm" },
-    { name: "rk-videomem", filename: "rk-videomem.plm" },
-    { name: "rk-demo", filename: "rk-demo.plm" },
+    { name: "hello", filename: "hello.plm" },
+    { name: "literally", filename: "literally.plm" },
+    { name: "strlen", filename: "strlen.plm" },
+    { name: "videomem", filename: "videomem.plm" },
+    { name: "greeting", filename: "greeting.plm" },
 ];

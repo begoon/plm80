@@ -13,7 +13,7 @@ Operational context for future Claude sessions working on this repo. For the pub
 
 ```bash
 just ci              # bun install --frozen-lockfile, typecheck, full tests
-just demo            # compile + assemble + run docs/examples/rk-demo.plm under rk86
+just demo            # compile + assemble + run docs/examples/greeting.plm under rk86
 just run <NAME>      # same, for any docs/examples/<NAME>.plm
 just publish         # ci + npm version patch + npm publish (prepublishOnly reruns typecheck/test/build)
 just build-playground  # bundle the browser playground in docs/

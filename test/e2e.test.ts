@@ -1,19 +1,19 @@
-import { expect, test } from "bun:test";
 import { asm } from "asm8080";
+import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generate } from "../src/codegen.ts";
 import { tokenize } from "../src/lexer.ts";
-import { preprocess } from "../src/preprocess.ts";
 import { parse } from "../src/parser.ts";
+import { preprocess } from "../src/preprocess.ts";
 import { analyze } from "../src/sema.ts";
 
 function compileToBin(plmPath: string): Uint8Array {
     const src = readFileSync(plmPath, "utf-8");
     const ast = parse(preprocess(tokenize(src)));
     const res = analyze(ast);
-    const asmSrc = generate(ast, res, { origin: 0, stack: 0x76CF });
+    const asmSrc = generate(ast, res, { origin: 0, stack: 0x76cf });
     const sections = asm(asmSrc);
     expect(sections.length).toBe(1);
     return Uint8Array.from(sections[0]!.data);
@@ -39,8 +39,8 @@ function runUnderRk86(bin: Uint8Array): string {
     return stripDisplay(proc.stdout.toString());
 }
 
-test("rk-demo.plm: banner, sequence, and sum printed by monitor ROM", () => {
-    const bin = compileToBin("docs/examples/rk-demo.plm");
+test("greeting.plm: banner, sequence, and sum printed by monitor ROM", () => {
+    const bin = compileToBin("docs/examples/greeting.plm");
     expect(bin.length).toBeGreaterThan(0);
     expect(bin.length).toBeLessThan(512);
 
@@ -53,7 +53,8 @@ test("rk-demo.plm: banner, sequence, and sum printed by monitor ROM", () => {
 test("minimal PUTC program prints three chars via monitor", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "abc.plm");
-    writeFileSync(plm,
+    writeFileSync(
+        plm,
         `PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
          CALL PUTC(41H);
          CALL PUTC(42H);
@@ -67,7 +68,8 @@ test("minimal PUTC program prints three chars via monitor", () => {
 test("DO I = 1 TO 5 loop runs 5 times under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "iter.plm");
-    writeFileSync(plm,
+    writeFileSync(
+        plm,
         `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
          PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
 
@@ -85,7 +87,8 @@ test("DO I = 1 TO 5 loop runs 5 times under rk86", () => {
 test("DO CASE dispatches to the selected branch under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "case.plm");
-    writeFileSync(plm,
+    writeFileSync(
+        plm,
         `PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
 
          DECLARE N BYTE;
@@ -107,7 +110,8 @@ test("DO CASE dispatches to the selected branch under rk86", () => {
 test("LOW / HIGH / SHR / SHL / ROR / ROL compute correctly under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "bits.plm");
-    writeFileSync(plm,
+    writeFileSync(
+        plm,
         `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
          PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
 
@@ -142,7 +146,8 @@ test("LOW / HIGH / SHR / SHL / ROR / ROL compute correctly under rk86", () => {
 test("byte *, /, MOD helpers compute correct results under rk86", () => {
     const dir = mkdtempSync(join(tmpdir(), "plm-e2e-"));
     const plm = join(dir, "arith.plm");
-    writeFileSync(plm,
+    writeFileSync(
+        plm,
         `HEXB: PROCEDURE (B)  REGS(A) AT (0F815H); DECLARE B BYTE;  END HEXB;
          PUTC: PROCEDURE (CH) REGS(C) AT (0F809H); DECLARE CH BYTE; END PUTC;
 
